@@ -1,19 +1,1 @@
-STRIPE_WEBHOOK_SECRET=****************************
-STRIPE_SECRET_KEY=********************
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=*********************
-NEXT_PUBLIC_ENABLE_MOCK_AUTH= 
-XAI_API_KEY=*******************
-POSTGRES_URL=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E50G@aws-0-us$
-POSTGRES_PRISMA_URL=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E50G@a$
-SUPABASE_URL=https://fkdnwzxainirielrpfzm.supabase.co
-NEXT_PUBLIC_SUPABASE_URL=https://fkdnwzxainirielrpfzm.supabase.co
-POSTGRES_URL_NON_POOLING=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E$
-SUPABASE_JWT_SECRET=*********************
-POSTGRES_USER=postgres
-NEXT_PUBLIC_SUPABASE_ANON_KEY=************************
-POSTGRES_PASSWORD=Jc0goay3nhX3E50G
-POSTGRES_DATABASE=postgres
-SUPABASE_SERVICE_ROLE_KEY=***************
-POSTGRES_HOST=db.fkdnwzxainirielrpfzm.supabase.co
-SUPABASE_ANON_KEY=*************************
 
