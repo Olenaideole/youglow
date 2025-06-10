@@ -85,9 +85,21 @@ export default function CheckoutPage() {
   const currentPlan = plans.find((plan) => plan.id === selectedPlan) || plans[1]
 
   const createPaymentIntent = async () => {
+    console.log("createPaymentIntent called"); // New log
+
     if (!customerInfo.name || !customerInfo.email || !selectedPlan) {
-      return
+      console.log("Missing customer info or plan, returning.", { customerInfo, selectedPlan }); // New log
+      return;
     }
+
+    console.log("Attempting to create payment intent with:", { customerInfo, selectedPlan }); // New log
+
+    const requestBody = {
+      planId: selectedPlan,
+      email: customerInfo.email,
+      name: customerInfo.name,
+    };
+    console.log("Request body for /api/create-payment-intent:", requestBody); // New log
 
     try {
       const response = await fetch("/api/create-payment-intent", {
@@ -95,21 +107,28 @@ export default function CheckoutPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          planId: selectedPlan,
-          email: customerInfo.email,
-          name: customerInfo.name,
-        }),
-      })
+        body: JSON.stringify(requestBody),
+      });
 
-      const data = await response.json()
+      console.log("Response from /api/create-payment-intent:", { // New log
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      const data = await response.json();
+      console.log("Data received from /api/create-payment-intent:", data); // New log
+
       if (data.clientSecret) {
-        setClientSecret(data.clientSecret)
+        console.log("Client secret received:", data.clientSecret); // New log
+        setClientSecret(data.clientSecret);
+        console.log("clientSecret state has been set with:", data.clientSecret); // New log
+      } else {
+        console.log("Client secret MISSING in response data.", data); // New log
       }
     } catch (error) {
-      console.error("Error creating payment intent:", error)
+      console.error("Error creating payment intent:", error); // Modify to log full error
     }
-  }
+  };
 
   useEffect(() => {
     if (customerInfo.name && customerInfo.email && selectedPlan) {
