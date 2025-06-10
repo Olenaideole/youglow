@@ -1,5 +1,4 @@
 import { loadStripe, StripeConstructorOptions } from "@stripe/stripe-js";
-import StripeNode from "stripe"; // Renamed import
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
@@ -22,23 +21,7 @@ if (stripePublishableKey) {
   stripePromise = Promise.resolve(null); // Resolve with null if key is missing
 }
 
-// Server-side Stripe
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-let stripe: StripeNode | null = null; // Use aliased import StripeNode
-
-if (stripeSecretKey) {
-  stripe = new StripeNode(stripeSecretKey, { // Use aliased import StripeNode
-    apiVersion: "2024-06-20",
-    typescript: true, // Added for good measure
-  });
-  console.log("Server-side Stripe SDK initialized.");
-} else {
-  console.error(
-    "STRIPE_SECRET_KEY is not set. Server-side Stripe SDK cannot be initialized. API routes requiring Stripe will fail."
-  );
-}
-
-export { stripePromise, stripe }; // Combined export for both client and server-side stripe objects
+export { stripePromise }; // Export client-side stripe promise
 
 export const STRIPE_PLANS = {
   "1-week": {
