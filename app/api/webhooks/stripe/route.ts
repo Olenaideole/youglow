@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { stripe } from "@/lib/stripe"
+import { stripe } from "@/lib/stripe.server"
 import { headers } from "next/headers"
 
 // Mock function to generate random password

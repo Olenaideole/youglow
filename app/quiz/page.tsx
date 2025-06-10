@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -26,8 +26,89 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { redirectToCheckout } from "@/lib/stripe-client";
+
+// Interface and Component for URL State Handling
+interface QuizUrlStateHandlerProps {
+  showResults: boolean;
+  answers: Record<number, string | string[]>;
+  email: string;
+  currentQuestion: number;
+  setShowResults: (value: boolean) => void;
+  setAnswers: (value: Record<number, string | string[]>) => void;
+  setEmail: (value: string) => void;
+  setShowGame: (value: boolean) => void;
+  setGameCompleted: (value: boolean) => void;
+  setShowEmailCapture: (value: boolean) => void;
+  setShowChallengeSetup: (value: boolean) => void;
+}
+
+function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
+  const {
+    showResults,
+    answers,
+    email,
+    currentQuestion,
+    setShowResults,
+    setAnswers,
+    setEmail,
+    setShowGame,
+    setGameCompleted,
+    setShowEmailCapture,
+    setShowChallengeSetup,
+  } = props;
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const step = searchParams.get('step');
+    if (step === 'results') {
+      if (!showResults) {
+        if (typeof window !== 'undefined') {
+          try {
+            const savedAnswers = sessionStorage.getItem('quizAnswers');
+            if (savedAnswers) {
+              const parsedAnswers = JSON.parse(savedAnswers);
+              if (Object.keys(parsedAnswers).length > 0) {
+                setAnswers(parsedAnswers);
+              }
+            }
+            const savedEmail = sessionStorage.getItem('quizEmail');
+            if (savedEmail) {
+              setEmail(savedEmail);
+            }
+          } catch (e) {
+            console.error("Error restoring quiz data from sessionStorage:", e);
+          }
+        }
+      }
+      setShowGame(false);
+      setGameCompleted(true);
+      setShowEmailCapture(false);
+      setShowChallengeSetup(false);
+      setShowResults(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, showResults, setAnswers, setEmail, setShowGame, setGameCompleted, setShowEmailCapture, setShowResults]);
+
+  useEffect(() => {
+    if (currentQuestion === 0 && !searchParams.get('step')) {
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('quizAnswers');
+          sessionStorage.removeItem('quizEmail');
+        } catch (e) {
+          console.error("Error clearing quiz data from sessionStorage:", e);
+        }
+      }
+    }
+  }, [currentQuestion, searchParams]);
+
+  return null;
+}
+
+export const dynamic = 'force-dynamic';
 
 const quizQuestions = [
   // Demographics
@@ -470,6 +551,7 @@ export default function QuizPage() {
   const [earnedBadge, setEarnedBadge] = useState(false)
 
   const router = useRouter()
+  // const searchParams = useSearchParams(); // Moved to QuizUrlStateHandler
 
   // Replace the current currentStep and progress calculation with this:
   const totalSteps = quizQuestions.length + 4 // questions + game + email + challenge + results
@@ -528,6 +610,9 @@ export default function QuizPage() {
     }
   }, [showResults])
 
+  // useEffect for searchParams moved to QuizUrlStateHandler
+  // useEffect for clearing sessionStorage moved to QuizUrlStateHandler
+
   const handleAnswer = (value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [quizQuestions[currentQuestion].id]: value }))
   }
@@ -580,14 +665,36 @@ export default function QuizPage() {
   }
 
   const handleChallengeSubmit = () => {
-    setShowChallengeSetup(false)
-    setShowResults(true)
-  }
+    setShowChallengeSetup(false);
+    setShowResults(true);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+        if (email) { // Only save email if it exists
+          sessionStorage.setItem('quizEmail', email);
+        }
+      } catch (e) {
+        console.error("Error saving quiz data to sessionStorage:", e);
+      }
+    }
+    router.push('/quiz?step=results', undefined, { shallow: true });
+  };
 
   const skipChallenge = () => {
-    setShowChallengeSetup(false)
-    setShowResults(true)
-  }
+    setShowChallengeSetup(false);
+    setShowResults(true);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+        if (email) {
+          sessionStorage.setItem('quizEmail', email);
+        }
+      } catch (e) {
+        console.error("Error saving quiz data to sessionStorage:", e);
+      }
+    }
+    router.push('/quiz?step=results', undefined, { shallow: true });
+  };
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -1288,126 +1395,144 @@ export default function QuizPage() {
   }
 
   // Main Quiz Questions
-  const currentQ = quizQuestions[currentQuestion]
+  const currentQ = quizQuestions[currentQuestion];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                YouGlow
-              </span>
-            </Link>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Let's Personalize Your Plan</h1>
-            <p className="text-lg text-gray-600">Answer questions to get your custom skin glow strategy</p>
-          </div>
+    <>
+      <Suspense fallback={null}>
+        <QuizUrlStateHandler
+          showResults={showResults}
+          answers={answers}
+          email={email}
+          currentQuestion={currentQuestion}
+          setShowResults={setShowResults}
+          setAnswers={setAnswers}
+          setEmail={setEmail}
+          setShowGame={setShowGame}
+          setGameCompleted={setGameCompleted}
+          setShowEmailCapture={setShowEmailCapture}
+          setShowChallengeSetup={setShowChallengeSetup}
+        />
+      </Suspense>
 
-          {/* Progress */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
-              <Badge className="bg-pink-100 text-pink-800">{currentQ.category}</Badge>
-            </div>
-            <Progress value={progress} className="h-3" />
-          </div>
-
-          {/* Question */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl text-center">{currentQ.question}</CardTitle>
-              {currentQ.helpText && (
-                <p className="text-center text-sm text-green-600 font-medium">{currentQ.helpText}</p>
-              )}
-            </CardHeader>
-            <CardContent>
-              {currentQ.type === "radio" && (
-                <RadioGroup
-                  value={(answers[currentQ.id] as string) || ""}
-                  onValueChange={handleAnswer}
-                  className="space-y-4"
-                >
-                  {currentQ.options?.map((option) => (
-                    <Label
-                      key={option.value}
-                      htmlFor={option.value}
-                      className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all cursor-pointer w-full"
-                    >
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <span className="flex-1 font-medium">{option.label}</span>
-                    </Label>
-                  ))}
-                </RadioGroup>
-              )}
-
-              {currentQ.type === "checkbox" && (
-                <div className="space-y-4">
-                  {currentQ.options?.map((option) => (
-                    <Label
-                      key={option.value}
-                      htmlFor={option.value}
-                      className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all cursor-pointer w-full"
-                    >
-                      <Checkbox
-                        id={option.value}
-                        checked={((answers[currentQ.id] as string[]) || []).includes(option.value)}
-                        onCheckedChange={(checked) => {
-                          const currentAnswers = (answers[currentQ.id] as string[]) || []
-                          if (checked) {
-                            handleAnswer([...currentAnswers, option.value])
-                          } else {
-                            handleAnswer(currentAnswers.filter((a) => a !== option.value))
-                          }
-                        }}
-                      />
-                      <span className="flex-1 font-medium">{option.label}</span>
-                    </Label>
-                  ))}
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <Link href="/" className="inline-flex items-center space-x-2 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
-              )}
+                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                  YouGlow
+                </span>
+              </Link>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">Let's Personalize Your Plan</h1>
+              <p className="text-lg text-gray-600">Answer questions to get your custom skin glow strategy</p>
+            </div>
 
-              {currentQ.type === "text" && (
-                <Textarea
-                  placeholder={currentQ.placeholder}
-                  value={(answers[currentQ.id] as string) || ""}
-                  onChange={(e) => handleAnswer(e.target.value)}
-                  className="min-h-[100px]"
-                />
-              )}
-            </CardContent>
-          </Card>
+            {/* Progress */}
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
+                <Badge className="bg-pink-100 text-pink-800">{currentQ.category}</Badge>
+              </div>
+              <Progress value={progress} className="h-3" />
+            </div>
 
-          {/* Navigation */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={prevQuestion}
-              disabled={currentQuestion === 0}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Previous</span>
-            </Button>
+            {/* Question Card */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-xl text-center">{currentQ.question}</CardTitle>
+                {currentQ.helpText && (
+                  <p className="text-center text-sm text-green-600 font-medium">{currentQ.helpText}</p>
+                )}
+              </CardHeader>
+              <CardContent>
+                {currentQ.type === "radio" && (
+                  <RadioGroup
+                    value={(answers[currentQ.id] as string) || ""}
+                    onValueChange={handleAnswer}
+                    className="space-y-4"
+                  >
+                    {currentQ.options?.map((option) => (
+                      <Label
+                        key={option.value}
+                        htmlFor={option.value}
+                        className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all cursor-pointer w-full"
+                      >
+                        <RadioGroupItem value={option.value} id={option.value} />
+                        <span className="flex-1 font-medium">{option.label}</span>
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                )}
 
-            <Button
-              onClick={nextQuestion}
-              disabled={
-                !answers[currentQ.id] ||
-                (Array.isArray(answers[currentQ.id]) && (answers[currentQ.id] as string[]).length === 0)
-              }
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white flex items-center space-x-2"
-            >
-              <span>{currentQuestion === quizQuestions.length - 1 ? "Continue" : "Next"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+                {currentQ.type === "checkbox" && (
+                  <div className="space-y-4">
+                    {currentQ.options?.map((option) => (
+                      <Label
+                        key={option.value}
+                        htmlFor={option.value}
+                        className="flex items-center space-x-3 p-4 rounded-lg border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all cursor-pointer w-full"
+                      >
+                        <Checkbox
+                          id={option.value}
+                          checked={((answers[currentQ.id] as string[]) || []).includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            const currentAnswers = (answers[currentQ.id] as string[]) || []
+                            if (checked) {
+                              handleAnswer([...currentAnswers, option.value])
+                            } else {
+                              handleAnswer(currentAnswers.filter((a) => a !== option.value))
+                            }
+                          }}
+                        />
+                        <span className="flex-1 font-medium">{option.label}</span>
+                      </Label>
+                    ))}
+                  </div>
+                )}
+
+                {currentQ.type === "text" && (
+                  <Textarea
+                    placeholder={currentQ.placeholder}
+                    value={(answers[currentQ.id] as string) || ""}
+                    onChange={(e) => handleAnswer(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={prevQuestion}
+                disabled={currentQuestion === 0}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Previous</span>
+              </Button>
+
+              <Button
+                onClick={nextQuestion}
+                disabled={
+                  !answers[currentQ.id] ||
+                  (Array.isArray(answers[currentQ.id]) && (answers[currentQ.id] as string[]).length === 0)
+                }
+                className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white flex items-center space-x-2"
+              >
+                <span>{currentQuestion === quizQuestions.length - 1 ? "Continue" : "Next"}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }
