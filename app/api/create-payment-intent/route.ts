@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { stripe, STRIPE_PLANS } from "@/lib/stripe"
+import { STRIPE_PLANS } from "@/lib/stripe"
+import { stripe } from "@/lib/stripe.server"
 
 export async function POST(request: NextRequest) {
   try {
