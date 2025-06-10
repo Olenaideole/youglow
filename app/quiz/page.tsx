@@ -535,6 +535,7 @@ export default function QuizPage() {
       // Only attempt to restore if results are not already shown (to prevent re-running on other state changes)
       // And if answers/email are potentially missing (e.g. after a page refresh)
       if (!showResults) {
+        if (typeof window !== 'undefined') {
           try {
               const savedAnswers = sessionStorage.getItem('quizAnswers');
               if (savedAnswers) {
@@ -552,6 +553,7 @@ export default function QuizPage() {
           } catch (e) {
               console.error("Error restoring quiz data from sessionStorage:", e);
           }
+        }
       }
 
       // Set view states
@@ -567,11 +569,13 @@ export default function QuizPage() {
   useEffect(() => {
     // Clear session storage if the quiz is at the beginning and not showing results
     if (currentQuestion === 0 && !searchParams.get('step')) {
-      try {
-        sessionStorage.removeItem('quizAnswers');
-        sessionStorage.removeItem('quizEmail');
-      } catch (e) {
-        console.error("Error clearing quiz data from sessionStorage:", e);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('quizAnswers');
+          sessionStorage.removeItem('quizEmail');
+        } catch (e) {
+          console.error("Error clearing quiz data from sessionStorage:", e);
+        }
       }
     }
   }, [currentQuestion, searchParams]);
@@ -630,13 +634,15 @@ export default function QuizPage() {
   const handleChallengeSubmit = () => {
     setShowChallengeSetup(false);
     setShowResults(true);
-    try {
-      sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
-      if (email) { // Only save email if it exists
-        sessionStorage.setItem('quizEmail', email);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+        if (email) { // Only save email if it exists
+          sessionStorage.setItem('quizEmail', email);
+        }
+      } catch (e) {
+        console.error("Error saving quiz data to sessionStorage:", e);
       }
-    } catch (e) {
-      console.error("Error saving quiz data to sessionStorage:", e);
     }
     router.push('/quiz?step=results', undefined, { shallow: true });
   };
@@ -644,13 +650,15 @@ export default function QuizPage() {
   const skipChallenge = () => {
     setShowChallengeSetup(false);
     setShowResults(true);
-    try {
-      sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
-      if (email) {
-        sessionStorage.setItem('quizEmail', email);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+        if (email) {
+          sessionStorage.setItem('quizEmail', email);
+        }
+      } catch (e) {
+        console.error("Error saving quiz data to sessionStorage:", e);
       }
-    } catch (e) {
-      console.error("Error saving quiz data to sessionStorage:", e);
     }
     router.push('/quiz?step=results', undefined, { shallow: true });
   };
