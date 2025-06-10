@@ -1,67 +1,52 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Mock function to generate random password
-function generatePassword(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  let password = ""
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
-}
-
-// Mock function to send email
-async function sendCredentialsEmail(email: string, password: string, name: string) {
-  // In a real implementation, you would use a service like SendGrid, Mailgun, or AWS SES
-  console.log(`Sending credentials email to ${email}`)
-  console.log(`Name: ${name}`)
-  console.log(`Password: ${password}`)
-
-  // Simulate email sending delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  return { success: true }
-}
+import { createServerClient } from "@/lib/supabase"; // Import createServerClient
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, planId } = await request.json()
+    const supabase = createServerClient(); // Instantiate server client
+    const { email, password, name, planId } = await request.json() // Add password to destructuring
 
-    if (!email || !name || !planId) {
+    if (!email || !password || !name || !planId) { // Add password validation
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Generate random password
-    const password = generatePassword()
+    console.log("API Route: NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log("API Route: NEXT_PUBLIC_SUPABASE_ANON_KEY (first 5 chars):", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 5));
 
-    // In a real implementation, you would:
-    // 1. Create user in database with hashed password
-    // 2. Create subscription record
-    // 3. Send welcome email with credentials
-
-    // Mock user creation
-    const user = {
-      id: `user_${Date.now()}`,
+    const { data, error } = await supabase.auth.signUp({
       email,
-      name,
-      password, // In real app, this would be hashed
-      planId,
-      createdAt: new Date().toISOString(),
+      password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
+        data: {
+          name, // Include name in user metadata
+          planId, // Include planId if needed, or handle separately
+        },
+      },
+    })
+
+    if (error) {
+      console.error("Supabase sign up error:", error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Send credentials email
-    await sendCredentialsEmail(email, password, name)
+    // User created, but email confirmation is pending
+    // Supabase handles sending the confirmation email
+
+    // You might want to store additional user details or plan information
+    // in your own database tables here, linking it to the Supabase user ID (data.user?.id)
 
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
+      message: "Account created. Please check your email to verify.",
+      user: data.user, // Send back Supabase user object (or relevant parts)
     })
   } catch (error) {
     console.error("Account creation error:", error)
+    // Check if it's a known error type or a generic one
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json({ error: "Failed to create account" }, { status: 500 })
   }
 }
