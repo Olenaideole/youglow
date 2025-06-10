@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -28,6 +28,85 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { redirectToCheckout } from "@/lib/stripe-client";
+
+// Interface and Component for URL State Handling
+interface QuizUrlStateHandlerProps {
+  showResults: boolean;
+  answers: Record<number, string | string[]>;
+  email: string;
+  currentQuestion: number;
+  setShowResults: (value: boolean) => void;
+  setAnswers: (value: Record<number, string | string[]>) => void;
+  setEmail: (value: string) => void;
+  setShowGame: (value: boolean) => void;
+  setGameCompleted: (value: boolean) => void;
+  setShowEmailCapture: (value: boolean) => void;
+  setShowChallengeSetup: (value: boolean) => void;
+}
+
+function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
+  const {
+    showResults,
+    answers,
+    email,
+    currentQuestion,
+    setShowResults,
+    setAnswers,
+    setEmail,
+    setShowGame,
+    setGameCompleted,
+    setShowEmailCapture,
+    setShowChallengeSetup,
+  } = props;
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const step = searchParams.get('step');
+    if (step === 'results') {
+      if (!showResults) {
+        if (typeof window !== 'undefined') {
+          try {
+            const savedAnswers = sessionStorage.getItem('quizAnswers');
+            if (savedAnswers) {
+              const parsedAnswers = JSON.parse(savedAnswers);
+              if (Object.keys(parsedAnswers).length > 0) {
+                setAnswers(parsedAnswers);
+              }
+            }
+            const savedEmail = sessionStorage.getItem('quizEmail');
+            if (savedEmail) {
+              setEmail(savedEmail);
+            }
+          } catch (e) {
+            console.error("Error restoring quiz data from sessionStorage:", e);
+          }
+        }
+      }
+      setShowGame(false);
+      setGameCompleted(true);
+      setShowEmailCapture(false);
+      setShowChallengeSetup(false);
+      setShowResults(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, showResults, setAnswers, setEmail, setShowGame, setGameCompleted, setShowEmailCapture, setShowResults]);
+
+  useEffect(() => {
+    if (currentQuestion === 0 && !searchParams.get('step')) {
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('quizAnswers');
+          sessionStorage.removeItem('quizEmail');
+        } catch (e) {
+          console.error("Error clearing quiz data from sessionStorage:", e);
+        }
+      }
+    }
+  }, [currentQuestion, searchParams]);
+
+  return null;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -472,7 +551,7 @@ export default function QuizPage() {
   const [earnedBadge, setEarnedBadge] = useState(false)
 
   const router = useRouter()
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams(); // Moved to QuizUrlStateHandler
 
   // Replace the current currentStep and progress calculation with this:
   const totalSteps = quizQuestions.length + 4 // questions + game + email + challenge + results
@@ -531,56 +610,8 @@ export default function QuizPage() {
     }
   }, [showResults])
 
-  useEffect(() => {
-    const step = searchParams.get('step');
-    if (step === 'results') {
-      // Only attempt to restore if results are not already shown (to prevent re-running on other state changes)
-      // And if answers/email are potentially missing (e.g. after a page refresh)
-      if (!showResults) {
-        if (typeof window !== 'undefined') {
-          try {
-              const savedAnswers = sessionStorage.getItem('quizAnswers');
-              if (savedAnswers) {
-                  const parsedAnswers = JSON.parse(savedAnswers);
-                  // Ensure we only set state if there are actually saved answers
-                  if (Object.keys(parsedAnswers).length > 0) {
-                      setAnswers(parsedAnswers);
-                  }
-              }
-
-              const savedEmail = sessionStorage.getItem('quizEmail');
-              if (savedEmail) {
-                  setEmail(savedEmail);
-              }
-          } catch (e) {
-              console.error("Error restoring quiz data from sessionStorage:", e);
-          }
-        }
-      }
-
-      // Set view states
-      setShowGame(false);
-      setGameCompleted(true);
-      setShowEmailCapture(false);
-      setShowChallengeSetup(false);
-      setShowResults(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  useEffect(() => {
-    // Clear session storage if the quiz is at the beginning and not showing results
-    if (currentQuestion === 0 && !searchParams.get('step')) {
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.removeItem('quizAnswers');
-          sessionStorage.removeItem('quizEmail');
-        } catch (e) {
-          console.error("Error clearing quiz data from sessionStorage:", e);
-        }
-      }
-    }
-  }, [currentQuestion, searchParams]);
+  // useEffect for searchParams moved to QuizUrlStateHandler
+  // useEffect for clearing sessionStorage moved to QuizUrlStateHandler
 
   const handleAnswer = (value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [quizQuestions[currentQuestion].id]: value }))
@@ -1367,9 +1398,26 @@ export default function QuizPage() {
   const currentQ = quizQuestions[currentQuestion]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
+    <>
+      <Suspense fallback={null}>
+        <QuizUrlStateHandler
+          showResults={showResults}
+          answers={answers}
+          email={email}
+          currentQuestion={currentQuestion}
+          setShowResults={setShowResults}
+          setAnswers={setAnswers}
+          setEmail={setEmail}
+          setShowGame={setShowGame}
+          setGameCompleted={setGameCompleted}
+          setShowEmailCapture={setShowEmailCapture}
+          setShowChallengeSetup={setShowChallengeSetup}
+        />
+      </Suspense>
+
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center space-x-2 mb-6">
