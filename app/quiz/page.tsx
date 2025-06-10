@@ -48,9 +48,9 @@ interface QuizUrlStateHandlerProps {
 function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
   const {
     showResults,
-    // answers, // Not directly used in this effect for decision making, but set by it
-    // email, // Not directly used in this effect for decision making, but set by it
-    // currentQuestion, // Used in the second effect
+    // answers, // Not directly used for decision making, but set
+    // email, // Not directly used for decision making, but set
+    // currentQuestion, // Used in the second effect within this component
     setShowResults,
     setAnswers,
     setEmail,
@@ -66,7 +66,7 @@ function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
   useEffect(() => {
     const step = searchParams.get('step');
     if (step === 'results') {
-      if (!showResults) { // Check current state before trying to update
+      if (!showResults) {
         if (typeof window !== 'undefined') {
           try {
             const savedAnswers = sessionStorage.getItem('quizAnswers');
@@ -115,420 +115,29 @@ export const dynamic = 'force-dynamic';
 
 const quizQuestions = [
   // Demographics
-  {
-    id: 1,
-    category: "Demographics",
-    question: "What's your gender?",
-    type: "radio",
-    options: [
-      { value: "female", label: "Female" },
-      { value: "male", label: "Male" },
-      { value: "non_binary", label: "Non-binary" },
-      { value: "prefer_not_to_say", label: "Prefer not to say" },
-    ],
-  },
-  {
-    id: 2,
-    category: "Demographics",
-    question: "How old are you?",
-    type: "radio",
-    options: [
-      { value: "under_18", label: "Under 18" },
-      { value: "18_24", label: "18–24" },
-      { value: "25_34", label: "25–34" },
-      { value: "35_44", label: "35–44" },
-      { value: "45_54", label: "45–54" },
-      { value: "55_plus", label: "55+" },
-    ],
-  },
-
+  { id: 1, category: "Demographics", question: "What's your gender?", type: "radio", options: [ { value: "female", label: "Female" }, { value: "male", label: "Male" }, { value: "non_binary", label: "Non-binary" }, { value: "prefer_not_to_say", label: "Prefer not to say" }, ], }, { id: 2, category: "Demographics", question: "How old are you?", type: "radio", options: [ { value: "under_18", label: "Under 18" }, { value: "18_24", label: "18–24" }, { value: "25_34", label: "25–34" }, { value: "35_44", label: "35–44" }, { value: "45_54", label: "45–54" }, { value: "55_plus", label: "55+" }, ], },
   // Skin Goals & Type
-  {
-    id: 3,
-    category: "Skin Goals & Type",
-    question: "What's your #1 skin goal?",
-    type: "radio",
-    options: [
-      { value: "clear_acne", label: "Clear acne" },
-      { value: "even_tone", label: "Even out skin tone" },
-      { value: "reduce_lines", label: "Reduce fine lines & wrinkles" },
-      { value: "deep_hydration", label: "Deep hydration" },
-      { value: "boost_glow", label: "Boost natural glow" },
-      { value: "reduce_sensitivity", label: "Reduce sensitivity" },
-    ],
-  },
-  {
-    id: 4,
-    category: "Skin Goals & Type",
-    question: "How would you describe your skin type?",
-    type: "radio",
-    options: [
-      { value: "oily", label: "Oily" },
-      { value: "dry", label: "Dry" },
-      { value: "combination", label: "Combination" },
-      { value: "sensitive", label: "Sensitive" },
-      { value: "normal", label: "Normal" },
-    ],
-  },
-  {
-    id: 5,
-    category: "Skin Goals & Type",
-    question: "What skin concerns do you currently have? (Select all that apply)",
-    type: "checkbox",
-    options: [
-      { value: "acne", label: "Acne" },
-      { value: "pigmentation", label: "Pigmentation" },
-      { value: "dryness", label: "Dryness" },
-      { value: "wrinkles", label: "Wrinkles" },
-      { value: "dullness", label: "Dullness" },
-      { value: "sensitivity", label: "Sensitivity" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 6,
-    category: "Skin Goals & Type",
-    question: "How often do you wear makeup?",
-    type: "radio",
-    options: [
-      { value: "daily", label: "Daily" },
-      { value: "occasionally", label: "Occasionally" },
-      { value: "rarely", label: "Rarely" },
-      { value: "never", label: "Never" },
-    ],
-  },
-
+  { id: 3, category: "Skin Goals & Type", question: "What's your #1 skin goal?", type: "radio", options: [ { value: "clear_acne", label: "Clear acne" }, { value: "even_tone", label: "Even out skin tone" }, { value: "reduce_lines", label: "Reduce fine lines & wrinkles" }, { value: "deep_hydration", label: "Deep hydration" }, { value: "boost_glow", label: "Boost natural glow" }, { value: "reduce_sensitivity", label: "Reduce sensitivity" }, ], }, { id: 4, category: "Skin Goals & Type", question: "How would you describe your skin type?", type: "radio", options: [ { value: "oily", label: "Oily" }, { value: "dry", label: "Dry" }, { value: "combination", label: "Combination" }, { value: "sensitive", label: "Sensitive" }, { value: "normal", label: "Normal" }, ], }, { id: 5, category: "Skin Goals & Type", question: "What skin concerns do you currently have? (Select all that apply)", type: "checkbox", options: [ { value: "acne", label: "Acne" }, { value: "pigmentation", label: "Pigmentation" }, { value: "dryness", label: "Dryness" }, { value: "wrinkles", label: "Wrinkles" }, { value: "dullness", label: "Dullness" }, { value: "sensitivity", label: "Sensitivity" }, { value: "none", label: "None" }, ], }, { id: 6, category: "Skin Goals & Type", question: "How often do you wear makeup?", type: "radio", options: [ { value: "daily", label: "Daily" }, { value: "occasionally", label: "Occasionally" }, { value: "rarely", label: "Rarely" }, { value: "never", label: "Never" }, ], },
   // Diet & Food Habits
-  {
-    id: 7,
-    category: "Diet & Food Habits",
-    question: "Are you currently following any diet?",
-    type: "radio",
-    options: [
-      { value: "keto", label: "Keto" },
-      { value: "vegan", label: "Vegan" },
-      { value: "vegetarian", label: "Vegetarian" },
-      { value: "paleo", label: "Paleo" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 8,
-    category: "Diet & Food Habits",
-    question: "Have you tried any diet in the past? Which ones?",
-    type: "checkbox",
-    options: [
-      { value: "keto", label: "Keto" },
-      { value: "vegan", label: "Vegan" },
-      { value: "vegetarian", label: "Vegetarian" },
-      { value: "paleo", label: "Paleo" },
-      { value: "intermittent_fasting", label: "Intermittent Fasting" },
-      { value: "low_carb", label: "Low Carb" },
-      { value: "mediterranean", label: "Mediterranean" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 9,
-    category: "Diet & Food Habits",
-    question: "What foods do you crave most often?",
-    type: "radio",
-    options: [
-      { value: "sweet", label: "Sweet foods (chocolate, candy, desserts)" },
-      { value: "salty", label: "Salty foods (chips, crackers, pretzels)" },
-      { value: "carbs", label: "Carbs (bread, pasta, rice)" },
-      { value: "dairy", label: "Dairy (cheese, ice cream, milk)" },
-      { value: "fried", label: "Fried foods" },
-      { value: "healthy", label: "Healthy foods (fruits, vegetables)" },
-    ],
-  },
-  {
-    id: 10,
-    category: "Diet & Food Habits",
-    question: "How many glasses of water do you drink daily?",
-    type: "radio",
-    options: [
-      { value: "less_than_3", label: "Less than 3" },
-      { value: "3_5", label: "3-5" },
-      { value: "6_8", label: "6-8" },
-      { value: "more_than_8", label: "More than 8" },
-    ],
-  },
-  {
-    id: 11,
-    category: "Diet & Food Habits",
-    question: "How often do you eat processed or fast food?",
-    type: "radio",
-    options: [
-      { value: "rarely", label: "Rarely" },
-      { value: "1_2_times", label: "1-2 times per week" },
-      { value: "3_5_times", label: "3-5 times per week" },
-      { value: "almost_daily", label: "Almost daily" },
-    ],
-  },
-  {
-    id: 12,
-    category: "Diet & Food Habits",
-    question: "Do you have any food allergies?",
-    type: "checkbox",
-    options: [
-      { value: "dairy", label: "Dairy" },
-      { value: "gluten", label: "Gluten" },
-      { value: "nuts", label: "Nuts" },
-      { value: "shellfish", label: "Shellfish" },
-      { value: "eggs", label: "Eggs" },
-      { value: "soy", label: "Soy" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 13,
-    category: "Diet & Food Habits",
-    question: "Are there specific foods you avoid for skin reasons?",
-    type: "checkbox",
-    options: [
-      { value: "dairy", label: "Dairy" },
-      { value: "sugar", label: "Sugar" },
-      { value: "chocolate", label: "Chocolate" },
-      { value: "fried_foods", label: "Fried foods" },
-      { value: "spicy_foods", label: "Spicy foods" },
-      { value: "alcohol", label: "Alcohol" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 14,
-    category: "Diet & Food Habits",
-    question: "What are your 3 favorite dishes?",
-    type: "text",
-    placeholder: "e.g., Pasta carbonara, Chicken tikka masala, Caesar salad",
-    helpText: "We'll create skin-friendly recipes inspired by them!",
-  },
-
+  { id: 7, category: "Diet & Food Habits", question: "Are you currently following any diet?", type: "radio", options: [ { value: "keto", label: "Keto" }, { value: "vegan", label: "Vegan" }, { value: "vegetarian", label: "Vegetarian" }, { value: "paleo", label: "Paleo" }, { value: "none", label: "None" }, ], }, { id: 8, category: "Diet & Food Habits", question: "Have you tried any diet in the past? Which ones?", type: "checkbox", options: [ { value: "keto", label: "Keto" }, { value: "vegan", label: "Vegan" }, { value: "vegetarian", label: "Vegetarian" }, { value: "paleo", label: "Paleo" }, { value: "intermittent_fasting", label: "Intermittent Fasting" }, { value: "low_carb", label: "Low Carb" }, { value: "mediterranean", label: "Mediterranean" }, { value: "none", label: "None" }, ], }, { id: 9, category: "Diet & Food Habits", question: "What foods do you crave most often?", type: "radio", options: [ { value: "sweet", label: "Sweet foods (chocolate, candy, desserts)" }, { value: "salty", label: "Salty foods (chips, crackers, pretzels)" }, { value: "carbs", label: "Carbs (bread, pasta, rice)" }, { value: "dairy", label: "Dairy (cheese, ice cream, milk)" }, { value: "fried", label: "Fried foods" }, { value: "healthy", label: "Healthy foods (fruits, vegetables)" }, ], }, { id: 10, category: "Diet & Food Habits", question: "How many glasses of water do you drink daily?", type: "radio", options: [ { value: "less_than_3", label: "Less than 3" }, { value: "3_5", label: "3-5" }, { value: "6_8", label: "6-8" }, { value: "more_than_8", label: "More than 8" }, ], }, { id: 11, category: "Diet & Food Habits", question: "How often do you eat processed or fast food?", type: "radio", options: [ { value: "rarely", label: "Rarely" }, { value: "1_2_times", label: "1-2 times per week" }, { value: "3_5_times", label: "3-5 times per week" }, { value: "almost_daily", label: "Almost daily" }, ], }, { id: 12, category: "Diet & Food Habits", question: "Do you have any food allergies?", type: "checkbox", options: [ { value: "dairy", label: "Dairy" }, { value: "gluten", label: "Gluten" }, { value: "nuts", label: "Nuts" }, { value: "shellfish", label: "Shellfish" }, { value: "eggs", label: "Eggs" }, { value: "soy", label: "Soy" }, { value: "none", label: "None" }, ], }, { id: 13, category: "Diet & Food Habits", question: "Are there specific foods you avoid for skin reasons?", type: "checkbox", options: [ { value: "dairy", label: "Dairy" }, { value: "sugar", label: "Sugar" }, { value: "chocolate", label: "Chocolate" }, { value: "fried_foods", label: "Fried foods" }, { value: "spicy_foods", label: "Spicy foods" }, { value: "alcohol", label: "Alcohol" }, { value: "none", label: "None" }, ], }, { id: 14, category: "Diet & Food Habits", question: "What are your 3 favorite dishes?", type: "text", placeholder: "e.g., Pasta carbonara, Chicken tikka masala, Caesar salad", helpText: "We'll create skin-friendly recipes inspired by them!", },
   // Supplements & Routine
-  {
-    id: 15,
-    category: "Supplements & Routine",
-    question: "Are you taking any skin supplements?",
-    type: "checkbox",
-    options: [
-      { value: "collagen", label: "Collagen" },
-      { value: "biotin", label: "Biotin" },
-      { value: "vitamin_c", label: "Vitamin C" },
-      { value: "vitamin_e", label: "Vitamin E" },
-      { value: "omega_3", label: "Omega-3" },
-      { value: "zinc", label: "Zinc" },
-      { value: "probiotics", label: "Probiotics" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 16,
-    category: "Supplements & Routine",
-    question: "How many skincare products do you currently use?",
-    type: "radio",
-    options: [
-      { value: "1_2", label: "1-2 products" },
-      { value: "3_5", label: "3-5 products" },
-      { value: "6_10", label: "6-10 products" },
-      { value: "more_than_10", label: "More than 10 products" },
-    ],
-  },
-  {
-    id: 17,
-    category: "Supplements & Routine",
-    question: "How consistent are you with your skincare routine?",
-    type: "radio",
-    options: [
-      { value: "daily", label: "Daily" },
-      { value: "3_5_times", label: "3–5 times a week" },
-      { value: "rarely", label: "Rarely" },
-    ],
-  },
-  {
-    id: 18,
-    category: "Supplements & Routine",
-    question: "Which skincare product can't you live without?",
-    type: "radio",
-    options: [
-      { value: "cleanser", label: "Cleanser" },
-      { value: "moisturizer", label: "Moisturizer" },
-      { value: "sunscreen", label: "Sunscreen" },
-      { value: "serum", label: "Serum" },
-      { value: "retinol", label: "Retinol" },
-      { value: "none", label: "None" },
-    ],
-  },
-
+  { id: 15, category: "Supplements & Routine", question: "Are you taking any skin supplements?", type: "checkbox", options: [ { value: "collagen", label: "Collagen" }, { value: "biotin", label: "Biotin" }, { value: "vitamin_c", label: "Vitamin C" }, { value: "vitamin_e", label: "Vitamin E" }, { value: "omega_3", label: "Omega-3" }, { value: "zinc", label: "Zinc" }, { value: "probiotics", label: "Probiotics" }, { value: "none", label: "None" }, ], }, { id: 16, category: "Supplements & Routine", question: "How many skincare products do you currently use?", type: "radio", options: [ { value: "1_2", label: "1-2 products" }, { value: "3_5", label: "3-5 products" }, { value: "6_10", label: "6-10 products" }, { value: "more_than_10", label: "More than 10 products" }, ], }, { id: 17, category: "Supplements & Routine", question: "How consistent are you with your skincare routine?", type: "radio", options: [ { value: "daily", label: "Daily" }, { value: "3_5_times", label: "3–5 times a week" }, { value: "rarely", label: "Rarely" }, ], }, { id: 18, category: "Supplements & Routine", question: "Which skincare product can't you live without?", type: "radio", options: [ { value: "cleanser", label: "Cleanser" }, { value: "moisturizer", label: "Moisturizer" }, { value: "sunscreen", label: "Sunscreen" }, { value: "serum", label: "Serum" }, { value: "retinol", label: "Retinol" }, { value: "none", label: "None" }, ], },
   // Lifestyle
-  {
-    id: 19,
-    category: "Lifestyle",
-    question: "How many hours of sleep do you get per night?",
-    type: "radio",
-    options: [
-      { value: "less_than_5", label: "Less than 5 hours" },
-      { value: "5_6", label: "5-6 hours" },
-      { value: "7_8", label: "7-8 hours" },
-      { value: "more_than_8", label: "More than 8 hours" },
-    ],
-  },
-  {
-    id: 20,
-    category: "Lifestyle",
-    question: "How often do you work out?",
-    type: "radio",
-    options: [
-      { value: "daily", label: "Daily" },
-      { value: "3_5_times", label: "3-5 times per week" },
-      { value: "1_2_times", label: "1-2 times per week" },
-      { value: "rarely", label: "Rarely" },
-      { value: "never", label: "Never" },
-    ],
-  },
-  {
-    id: 21,
-    category: "Lifestyle",
-    question: "What's your stress level most days?",
-    type: "radio",
-    options: [
-      { value: "low", label: "Low" },
-      { value: "medium", label: "Medium" },
-      { value: "high", label: "High" },
-    ],
-  },
-
+  { id: 19, category: "Lifestyle", question: "How many hours of sleep do you get per night?", type: "radio", options: [ { value: "less_than_5", label: "Less than 5 hours" }, { value: "5_6", label: "5-6 hours" }, { value: "7_8", label: "7-8 hours" }, { value: "more_than_8", label: "More than 8 hours" }, ], }, { id: 20, category: "Lifestyle", question: "How often do you work out?", type: "radio", options: [ { value: "daily", label: "Daily" }, { value: "3_5_times", label: "3-5 times per week" }, { value: "1_2_times", label: "1-2 times per week" }, { value: "rarely", label: "Rarely" }, { value: "never", label: "Never" }, ], }, { id: 21, category: "Lifestyle", question: "What's your stress level most days?", type: "radio", options: [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ], },
   // Additional Questions
-  {
-    id: 22,
-    category: "Lifestyle",
-    question: "How much time do you spend in the sun daily?",
-    type: "radio",
-    options: [
-      { value: "minimal", label: "Minimal (mostly indoors)" },
-      { value: "moderate", label: "Moderate (30 min - 2 hours)" },
-      { value: "high", label: "High (more than 2 hours)" },
-    ],
-  },
-  {
-    id: 23,
-    category: "Skin Goals & Type",
-    question: "Do you have any skin conditions diagnosed by a dermatologist?",
-    type: "checkbox",
-    options: [
-      { value: "acne", label: "Acne" },
-      { value: "rosacea", label: "Rosacea" },
-      { value: "eczema", label: "Eczema" },
-      { value: "psoriasis", label: "Psoriasis" },
-      { value: "melasma", label: "Melasma" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    id: 24,
-    category: "Lifestyle",
-    question: "How often do you change your pillowcase?",
-    type: "radio",
-    options: [
-      { value: "daily", label: "Daily" },
-      { value: "every_few_days", label: "Every few days" },
-      { value: "weekly", label: "Weekly" },
-      { value: "rarely", label: "Rarely" },
-    ],
-  },
-  {
-    id: 25,
-    category: "Diet & Food Habits",
-    question: "Do you drink alcohol?",
-    type: "radio",
-    options: [
-      { value: "never", label: "Never" },
-      { value: "occasionally", label: "Occasionally (1-2 times per month)" },
-      { value: "weekly", label: "Weekly (1-3 times per week)" },
-      { value: "daily", label: "Daily" },
-    ],
-  },
+  { id: 22, category: "Lifestyle", question: "How much time do you spend in the sun daily?", type: "radio", options: [ { value: "minimal", label: "Minimal (mostly indoors)" }, { value: "moderate", label: "Moderate (30 min - 2 hours)" }, { value: "high", label: "High (more than 2 hours)" }, ], }, { id: 23, category: "Skin Goals & Type", question: "Do you have any skin conditions diagnosed by a dermatologist?", type: "checkbox", options: [ { value: "acne", label: "Acne" }, { value: "rosacea", label: "Rosacea" }, { value: "eczema", label: "Eczema" }, { value: "psoriasis", label: "Psoriasis" }, { value: "melasma", label: "Melasma" }, { value: "none", label: "None" }, ], }, { id: 24, category: "Lifestyle", question: "How often do you change your pillowcase?", type: "radio", options: [ { value: "daily", label: "Daily" }, { value: "every_few_days", label: "Every few days" }, { value: "weekly", label: "Weekly" }, { value: "rarely", label: "Rarely" }, ], }, { id: 25, category: "Diet & Food Habits", question: "Do you drink alcohol?", type: "radio", options: [ { value: "never", label: "Never" }, { value: "occasionally", label: "Occasionally (1-2 times per month)" }, { value: "weekly", label: "Weekly (1-3 times per week)" }, { value: "daily", label: "Daily" }, ], },
 ];
 
 const ingredientsGame = {
   question: "Quick Game! Which of these ingredients is bad for your skin?",
-  options: [
-    { value: "hyaluronic_acid", label: "Hyaluronic Acid", correct: false },
-    { value: "alcohol_denat", label: "Alcohol Denat", correct: true },
-    { value: "niacinamide", label: "Niacinamide", correct: false },
-    { value: "vitamin_c", label: "Vitamin C", correct: false },
-    { value: "retinol", label: "Retinol", correct: false },
-  ],
+  options: [ { value: "hyaluronic_acid", label: "Hyaluronic Acid", correct: false }, { value: "alcohol_denat", label: "Alcohol Denat", correct: true }, { value: "niacinamide", label: "Niacinamide", correct: false }, { value: "vitamin_c", label: "Vitamin C", correct: false }, { value: "retinol", label: "Retinol", correct: false }, ],
 };
 
-const testimonials = [
-  {
-    name: "Sarah M.",
-    beforeAfter: "90% acne reduction in 6 weeks",
-    text: "The personalized plan actually worked! My skin has never been clearer.",
-    rating: 5,
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    name: "Emma K.",
-    beforeAfter: "Glowing skin transformation",
-    text: "The food scanner helped me avoid products that were breaking me out. Game changer!",
-    rating: 5,
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    name: "Jessica L.",
-    beforeAfter: "Reduced fine lines in 8 weeks",
-    text: "The recipes are delicious and my skin looks 5 years younger. Worth every penny!",
-    rating: 5,
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    name: "Maria R.",
-    beforeAfter: "Even skin tone achieved",
-    text: "Finally found a solution that works for my sensitive skin. The AI coach is amazing!",
-    rating: 5,
-    image: "/placeholder.svg?height=60&width=60",
-  },
-];
+const testimonials = [ { name: "Sarah M.", beforeAfter: "90% acne reduction in 6 weeks", text: "The personalized plan actually worked! My skin has never been clearer.", rating: 5, image: "/placeholder.svg?height=60&width=60", }, { name: "Emma K.", beforeAfter: "Glowing skin transformation", text: "The food scanner helped me avoid products that were breaking me out. Game changer!", rating: 5, image: "/placeholder.svg?height=60&width=60", }, { name: "Jessica L.", beforeAfter: "Reduced fine lines in 8 weeks", text: "The recipes are delicious and my skin looks 5 years younger. Worth every penny!", rating: 5, image: "/placeholder.svg?height=60&width=60", }, { name: "Maria R.", beforeAfter: "Even skin tone achieved", text: "Finally found a solution that works for my sensitive skin. The AI coach is amazing!", rating: 5, image: "/placeholder.svg?height=60&width=60", }, ];
 
-const liveRegistrations = [
-  "jenn**@gmail.com just joined",
-  "mari**@yahoo.com just grabbed the deal",
-  "alex**@outlook.com just started their plan",
-  "sara**@icloud.com just joined",
-  "emma**@gmail.com just grabbed the deal",
-  "lisa**@yahoo.com just started their plan",
-];
+const liveRegistrations = [ "jenn**@gmail.com just joined", "mari**@yahoo.com just grabbed the deal", "alex**@outlook.com just started their plan", "sara**@icloud.com just joined", "emma**@gmail.com just grabbed the deal", "lisa**@yahoo.com just started their plan", ];
 
-const plans = [
-  {
-    id: "1-week",
-    name: "1 Week",
-    originalPrice: 17.77,
-    discountedPrice: 6.93,
-    perDay: 0.99,
-    popular: false,
-  },
-  {
-    id: "4-weeks",
-    name: "4 Weeks",
-    originalPrice: 38.95,
-    discountedPrice: 15.19,
-    perDay: 0.54,
-    popular: true,
-    badge: "Most Popular",
-  },
-  {
-    id: "12-weeks",
-    name: "12 Weeks",
-    originalPrice: 89.72,
-    discountedPrice: 34.99,
-    perDay: 0.42,
-    popular: false,
-    badge: "Best Value",
-  },
-];
+const plans = [ { id: "1-week", name: "1 Week", originalPrice: 17.77, discountedPrice: 6.93, perDay: 0.99, popular: false, }, { id: "4-weeks", name: "4 Weeks", originalPrice: 38.95, discountedPrice: 15.19, perDay: 0.54, popular: true, badge: "Most Popular", }, { id: "12-weeks", name: "12 Weeks", originalPrice: 89.72, discountedPrice: 34.99, perDay: 0.42, popular: false, badge: "Best Value", }, ];
 
 export default function QuizPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -548,7 +157,7 @@ export default function QuizPage() {
     difficulties: "",
   });
   const [showResults, setShowResults] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(600);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [currentRegistration, setCurrentRegistration] = useState(0);
   const [earnedBadge, setEarnedBadge] = useState(false);
@@ -556,7 +165,7 @@ export default function QuizPage() {
 
   const router = useRouter();
 
-  const totalSteps = quizQuestions.length + 4; // questions + game + email + challenge + results
+  const totalSteps = quizQuestions.length + 4;
 
   let currentStep = 0;
   if (showResults) {
@@ -716,7 +325,6 @@ export default function QuizPage() {
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl mx-auto">
-              {/* Header */}
               <div className="text-center mb-8">
                 <Link href="/" className="inline-flex items-center space-x-2 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -727,7 +335,6 @@ export default function QuizPage() {
                   </span>
                 </Link>
               </div>
-              {/* Progress */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
@@ -735,7 +342,6 @@ export default function QuizPage() {
                 </div>
                 <Progress value={progress} className="h-3" />
               </div>
-              {/* Game */}
               <Card className="mb-8">
                 <CardHeader className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -809,7 +415,6 @@ export default function QuizPage() {
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl mx-auto">
-              {/* Header */}
               <div className="text-center mb-8">
                 <Link href="/" className="inline-flex items-center space-x-2 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -820,7 +425,6 @@ export default function QuizPage() {
                   </span>
                 </Link>
               </div>
-              {/* Progress */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
@@ -828,7 +432,6 @@ export default function QuizPage() {
                 </div>
                 <Progress value={progress} className="h-3" />
               </div>
-              {/* Email Capture */}
               <Card className="mb-8">
                 <CardHeader className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -873,7 +476,6 @@ export default function QuizPage() {
                   </Button>
                 </CardContent>
               </Card>
-              {/* Navigation */}
               <div className="flex justify-between">
                 <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
                   <ArrowLeft className="w-4 h-4" />
@@ -891,7 +493,6 @@ export default function QuizPage() {
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl mx-auto">
-              {/* Header */}
               <div className="text-center mb-8">
                 <Link href="/" className="inline-flex items-center space-x-2 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -902,7 +503,6 @@ export default function QuizPage() {
                   </span>
                 </Link>
               </div>
-              {/* Progress */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
@@ -910,7 +510,6 @@ export default function QuizPage() {
                 </div>
                 <Progress value={progress} className="h-3" />
               </div>
-              {/* Challenge Setup */}
               <Card className="mb-8">
                 <CardHeader className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1018,7 +617,6 @@ export default function QuizPage() {
                   </div>
                 </CardContent>
               </Card>
-              {/* Navigation */}
               <div className="flex justify-between">
                 <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
                   <ArrowLeft className="w-4 h-4" />
@@ -1037,7 +635,6 @@ export default function QuizPage() {
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="max-w-4xl mx-auto">
-              {/* Header */}
               <div className="text-center mb-8">
                 <Link href="/" className="inline-flex items-center space-x-2 mb-6">
                   <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -1056,7 +653,6 @@ export default function QuizPage() {
                   </div>
                 )}
               </div>
-              {/* Limited Time Offer Banner */}
               <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-2xl p-6 mb-8 text-center">
                 <h2 className="text-2xl font-bold mb-2">Limited-Time Offer — 50% Off for 10 Minutes Only</h2>
                 <p className="mb-4">Your personal glow plan is reserved for the next {formatTime(timeLeft)} minutes</p>
@@ -1071,7 +667,6 @@ export default function QuizPage() {
                   Get Now - 50% Off!
                 </Button>
               </div>
-              {/* Monica's Success Story */}
               <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
                 <CardHeader className="text-center">
                   <div className="flex items-center justify-center space-x-2 mb-4">
@@ -1333,7 +928,6 @@ export default function QuizPage() {
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto">
-            {/* Header */}
             <div className="text-center mb-8">
               <Link href="/" className="inline-flex items-center space-x-2 mb-6">
                 <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -1346,7 +940,6 @@ export default function QuizPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Let's Personalize Your Plan</h1>
               <p className="text-lg text-gray-600">Answer questions to get your custom skin glow strategy</p>
             </div>
-            {/* Progress */}
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
@@ -1354,7 +947,6 @@ export default function QuizPage() {
               </div>
               <Progress value={progress} className="h-3" />
             </div>
-            {/* Question Card */}
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-xl text-center">{currentQ.question}</CardTitle>
@@ -1416,7 +1008,6 @@ export default function QuizPage() {
                 )}
               </CardContent>
             </Card>
-            {/* Navigation Buttons */}
             <div className="flex justify-between">
               <Button
                 variant="outline"
@@ -1473,4 +1064,3 @@ export default function QuizPage() {
     </>
   );
 }
->>>>>>> REPLACE
