@@ -27,6 +27,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { redirectToCheckout } from "@/lib/stripe-client";
 
 const quizQuestions = [
   // Demographics
@@ -1248,7 +1249,7 @@ export default function QuizPage() {
 
                       {/* CTA Button */}
                       <Button
-                        onClick={() => router.push(`/checkout?plan=${plan.id}&email=${email}`)}
+                        onClick={() => redirectToCheckout(plan.id)}
                         className={`w-full py-3 rounded-full font-semibold text-lg ${
                           plan.popular
                             ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg"
