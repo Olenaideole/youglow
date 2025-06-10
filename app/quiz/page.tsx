@@ -42,14 +42,15 @@ interface QuizUrlStateHandlerProps {
   setGameCompleted: (value: boolean) => void;
   setShowEmailCapture: (value: boolean) => void;
   setShowChallengeSetup: (value: boolean) => void;
+  setIsInitializing: (value: boolean) => void;
 }
 
 function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
   const {
     showResults,
-    answers,
-    email,
-    currentQuestion,
+    // answers, // Not directly used in this effect for decision making, but set by it
+    // email, // Not directly used in this effect for decision making, but set by it
+    // currentQuestion, // Used in the second effect
     setShowResults,
     setAnswers,
     setEmail,
@@ -57,6 +58,7 @@ function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
     setGameCompleted,
     setShowEmailCapture,
     setShowChallengeSetup,
+    setIsInitializing,
   } = props;
 
   const searchParams = useSearchParams();
@@ -64,7 +66,7 @@ function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
   useEffect(() => {
     const step = searchParams.get('step');
     if (step === 'results') {
-      if (!showResults) {
+      if (!showResults) { // Check current state before trying to update
         if (typeof window !== 'undefined') {
           try {
             const savedAnswers = sessionStorage.getItem('quizAnswers');
@@ -89,11 +91,12 @@ function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
       setShowChallengeSetup(false);
       setShowResults(true);
     }
+    setIsInitializing(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, showResults, setAnswers, setEmail, setShowGame, setGameCompleted, setShowEmailCapture, setShowResults]);
+  }, [searchParams, showResults, setAnswers, setEmail, setShowGame, setGameCompleted, setShowEmailCapture, setShowResults, setIsInitializing]);
 
   useEffect(() => {
-    if (currentQuestion === 0 && !searchParams.get('step')) {
+    if (props.currentQuestion === 0 && !searchParams.get('step')) {
       if (typeof window !== 'undefined') {
         try {
           sessionStorage.removeItem('quizAnswers');
@@ -103,7 +106,7 @@ function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
         }
       }
     }
-  }, [currentQuestion, searchParams]);
+  }, [props.currentQuestion, searchParams]);
 
   return null;
 }
@@ -445,7 +448,7 @@ const quizQuestions = [
       { value: "daily", label: "Daily" },
     ],
   },
-]
+];
 
 const ingredientsGame = {
   question: "Quick Game! Which of these ingredients is bad for your skin?",
@@ -456,7 +459,7 @@ const ingredientsGame = {
     { value: "vitamin_c", label: "Vitamin C", correct: false },
     { value: "retinol", label: "Retinol", correct: false },
   ],
-}
+};
 
 const testimonials = [
   {
@@ -487,7 +490,7 @@ const testimonials = [
     rating: 5,
     image: "/placeholder.svg?height=60&width=60",
   },
-]
+];
 
 const liveRegistrations = [
   "jenn**@gmail.com just joined",
@@ -496,7 +499,7 @@ const liveRegistrations = [
   "sara**@icloud.com just joined",
   "emma**@gmail.com just grabbed the deal",
   "lisa**@yahoo.com just started their plan",
-]
+];
 
 const plans = [
   {
@@ -525,17 +528,17 @@ const plans = [
     popular: false,
     badge: "Best Value",
   },
-]
+];
 
 export default function QuizPage() {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
-  const [showGame, setShowGame] = useState(false)
-  const [gameCompleted, setGameCompleted] = useState(false)
-  const [gameAnswer, setGameAnswer] = useState("")
-  const [showEmailCapture, setShowEmailCapture] = useState(false)
-  const [email, setEmail] = useState("")
-  const [showChallengeSetup, setShowChallengeSetup] = useState(false)
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
+  const [showGame, setShowGame] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
+  const [gameAnswer, setGameAnswer] = useState("");
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [email, setEmail] = useState("");
+  const [showChallengeSetup, setShowChallengeSetup] = useState(false);
   const [challengeData, setChallengeData] = useState({
     title: "",
     concern: "",
@@ -543,126 +546,113 @@ export default function QuizPage() {
     duration: 14,
     triedBefore: "",
     difficulties: "",
-  })
-  const [showResults, setShowResults] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(600) // 10 minutes in seconds
-  const [currentTestimonial, setCurrentTestimonial] = useState(0)
-  const [currentRegistration, setCurrentRegistration] = useState(0)
-  const [earnedBadge, setEarnedBadge] = useState(false)
+  });
+  const [showResults, setShowResults] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [currentRegistration, setCurrentRegistration] = useState(0);
+  const [earnedBadge, setEarnedBadge] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const router = useRouter()
-  // const searchParams = useSearchParams(); // Moved to QuizUrlStateHandler
+  const router = useRouter();
 
-  // Replace the current currentStep and progress calculation with this:
-  const totalSteps = quizQuestions.length + 4 // questions + game + email + challenge + results
+  const totalSteps = quizQuestions.length + 4; // questions + game + email + challenge + results
 
-  let currentStep = 0
+  let currentStep = 0;
   if (showResults) {
-    currentStep = totalSteps
+    currentStep = totalSteps;
   } else if (showChallengeSetup) {
-    currentStep = quizQuestions.length + 3
+    currentStep = quizQuestions.length + 3;
   } else if (showEmailCapture) {
-    currentStep = quizQuestions.length + 2
+    currentStep = quizQuestions.length + 2;
   } else if (showGame) {
-    // During the game, we're at the midpoint plus the game step
-    currentStep = Math.floor(quizQuestions.length / 2) + 1
+    currentStep = Math.floor(quizQuestions.length / 2) + 1;
   } else if (gameCompleted) {
-    // After game is completed, continue from where we left off
-    currentStep = currentQuestion + 1
+    currentStep = currentQuestion + 1;
     if (currentQuestion >= Math.floor(quizQuestions.length / 2)) {
-      currentStep += 1 // Add 1 for the completed game
+      currentStep += 1;
     }
   } else {
-    // Normal question progression
-    currentStep = currentQuestion + 1
+    currentStep = currentQuestion + 1;
   }
 
-  const progress = Math.min(100, Math.max(0, (currentStep / totalSteps) * 100))
+  const progress = Math.min(100, Math.max(0, (currentStep / totalSteps) * 100));
+  const shouldShowGame = currentQuestion >= Math.floor(quizQuestions.length / 2) && !gameCompleted;
 
-  // Check if we should show the game (midway point)
-  const shouldShowGame = currentQuestion >= Math.floor(quizQuestions.length / 2) && !gameCompleted
-
-  // Countdown timer
   useEffect(() => {
     if (showResults && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [showResults, timeLeft])
+  }, [showResults, timeLeft]);
 
-  // Testimonial carousel
   useEffect(() => {
     if (showResults) {
       const interval = setInterval(() => {
-        setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
-      }, 4000)
-      return () => clearInterval(interval)
+        setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
+      }, 4000);
+      return () => clearInterval(interval);
     }
-  }, [showResults])
+  }, [showResults]);
 
-  // Live registration feed
   useEffect(() => {
     if (showResults) {
       const interval = setInterval(() => {
-        setCurrentRegistration((prev) => (prev + 1) % liveRegistrations.length)
-      }, 3000)
-      return () => clearInterval(interval)
+        setCurrentRegistration((prev) => (prev + 1) % liveRegistrations.length);
+      }, 3000);
+      return () => clearInterval(interval);
     }
-  }, [showResults])
-
-  // useEffect for searchParams moved to QuizUrlStateHandler
-  // useEffect for clearing sessionStorage moved to QuizUrlStateHandler
+  }, [showResults]);
 
   const handleAnswer = (value: string | string[]) => {
-    setAnswers((prev) => ({ ...prev, [quizQuestions[currentQuestion].id]: value }))
-  }
+    setAnswers((prev) => ({ ...prev, [quizQuestions[currentQuestion].id]: value }));
+  };
 
   const handleGameAnswer = (value: string) => {
-    setGameAnswer(value)
-    const correct = ingredientsGame.options.find((opt) => opt.value === value)?.correct
+    setGameAnswer(value);
+    const correct = ingredientsGame.options.find((opt) => opt.value === value)?.correct;
     if (correct) {
-      setEarnedBadge(true)
+      setEarnedBadge(true);
     }
     setTimeout(() => {
-      setGameCompleted(true)
-      setShowGame(false)
-    }, 2000)
-  }
+      setGameCompleted(true);
+      setShowGame(false);
+    }, 2000);
+  };
 
   const nextQuestion = () => {
     if (shouldShowGame && !gameCompleted) {
-      setShowGame(true)
-      return
+      setShowGame(true);
+      return;
     }
-
     if (currentQuestion < quizQuestions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1)
+      setCurrentQuestion((prev) => prev + 1);
     } else {
-      setShowEmailCapture(true)
+      setShowEmailCapture(true);
     }
-  }
+  };
 
   const prevQuestion = () => {
     if (showEmailCapture) {
-      setShowEmailCapture(false)
-      return
+      setShowEmailCapture(false);
+      return;
     }
     if (showChallengeSetup) {
-      setShowChallengeSetup(false)
-      setShowEmailCapture(true)
-      return
+      setShowChallengeSetup(false);
+      setShowEmailCapture(true);
+      return;
     }
     if (currentQuestion > 0) {
-      setCurrentQuestion((prev) => prev - 1)
+      setCurrentQuestion((prev) => prev - 1);
     }
-  }
+  };
 
   const handleEmailSubmit = () => {
     if (email) {
-      setShowEmailCapture(false)
-      setShowChallengeSetup(true)
+      setShowEmailCapture(false);
+      setShowChallengeSetup(true);
     }
-  }
+  };
 
   const handleChallengeSubmit = () => {
     setShowChallengeSetup(false);
@@ -670,7 +660,7 @@ export default function QuizPage() {
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
-        if (email) { // Only save email if it exists
+        if (email) {
           sessionStorage.setItem('quizEmail', email);
         }
       } catch (e) {
@@ -697,724 +687,649 @@ export default function QuizPage() {
   };
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
-  }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
 
   const getPersonalizedPlan = () => {
-    const goal = answers[3]
-    const skinType = answers[4]
-
-    let planTitle = "Your Personalized Skin Glow Plan"
-    let planDescription = "Customized for your unique skin needs"
-
+    const goal = answers[3];
+    const skinType = answers[4];
+    let planTitle = "Your Personalized Skin Glow Plan";
+    let planDescription = "Customized for your unique skin needs";
     if (goal === "clear_acne") {
-      planTitle = "Clear Skin Transformation Plan"
-      planDescription = "Targeted acne-fighting nutrition and skincare routine"
+      planTitle = "Clear Skin Transformation Plan";
+      planDescription = "Targeted acne-fighting nutrition and skincare routine";
     } else if (goal === "boost_glow") {
-      planTitle = "Radiant Glow Enhancement Plan"
-      planDescription = "Antioxidant-rich foods and glow-boosting strategies"
+      planTitle = "Radiant Glow Enhancement Plan";
+      planDescription = "Antioxidant-rich foods and glow-boosting strategies";
     } else if (goal === "reduce_lines") {
-      planTitle = "Anti-Aging Renewal Plan"
-      planDescription = "Collagen-supporting nutrition and age-defying routine"
+      planTitle = "Anti-Aging Renewal Plan";
+      planDescription = "Collagen-supporting nutrition and age-defying routine";
+    }
+    return { planTitle, planDescription };
+  };
+
+  const renderQuizContent = () => {
+    if (showGame) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <Link href="/" className="inline-flex items-center space-x-2 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                    YouGlow
+                  </span>
+                </Link>
+              </div>
+              {/* Progress */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
+                  <Badge className="bg-yellow-100 text-yellow-800">🎮 Mini Game</Badge>
+                </div>
+                <Progress value={progress} className="h-3" />
+              </div>
+              {/* Game */}
+              <Card className="mb-8">
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl">{ingredientsGame.question}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-3">
+                    {ingredientsGame.options.map((option) => (
+                      <Button
+                        key={option.value}
+                        variant={gameAnswer === option.value ? (option.correct ? "default" : "destructive") : "outline"}
+                        onClick={() => handleGameAnswer(option.value)}
+                        disabled={!!gameAnswer}
+                        className={`p-4 h-auto text-left justify-start ${
+                          gameAnswer === option.value && option.correct ? "bg-green-600 hover:bg-green-700" : ""
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {gameAnswer === option.value && (
+                            <div className="flex-shrink-0">
+                              {option.correct ? (
+                                <CheckCircle className="w-5 h-5 text-white" />
+                              ) : (
+                                <span className="text-white">❌</span>
+                              )}
+                            </div>
+                          )}
+                          <span className="font-medium">{option.label}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                  {gameAnswer && (
+                    <div className="mt-6 text-center">
+                      {ingredientsGame.options.find((opt) => opt.value === gameAnswer)?.correct ? (
+                        <div className="space-y-3">
+                          <div className="text-green-600 font-bold text-lg">✅ Correct!</div>
+                          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+                            <div className="flex items-center justify-center space-x-2">
+                              <Trophy className="w-5 h-5 text-yellow-600" />
+                              <span className="font-semibold text-yellow-800">Badge Unlocked: Ingredient Expert!</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Alcohol Denat can be very drying and irritating to the skin, especially for sensitive skin
+                            types.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="text-red-600 font-bold text-lg">Not quite right!</div>
+                          <p className="text-sm text-gray-600">
+                            The correct answer is Alcohol Denat - it can be very drying and irritating to the skin.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    return { planTitle, planDescription }
-  }
-
-  // Ingredients Game Screen
-  if (showGame) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  YouGlow
-                </span>
-              </Link>
-            </div>
-
-            {/* Progress */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
-                <Badge className="bg-yellow-100 text-yellow-800">🎮 Mini Game</Badge>
+    if (showEmailCapture) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <Link href="/" className="inline-flex items-center space-x-2 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                    YouGlow
+                  </span>
+                </Link>
               </div>
-              <Progress value={progress} className="h-3" />
+              {/* Progress */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
+                  <Badge className="bg-blue-100 text-blue-800">📧 Almost Done</Badge>
+                </div>
+                <Progress value={progress} className="h-3" />
+              </div>
+              {/* Email Capture */}
+              <Card className="mb-8">
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl">Where should we send your personalized skin report?</CardTitle>
+                  <p className="text-gray-600 mt-2">
+                    Get your free personal plan + before & after progress tracking via email
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <Input
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="text-center text-lg p-4"
+                      required
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                        <p className="text-sm font-medium">Personalized Plan</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <Target className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                        <p className="text-sm font-medium">Progress Tracking</p>
+                      </div>
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <Sparkles className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                        <p className="text-sm font-medium">AI Recommendations</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleEmailSubmit}
+                    disabled={!email}
+                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-4 text-lg"
+                  >
+                    Get My Personalized Report
+                  </Button>
+                </CardContent>
+              </Card>
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
             </div>
+          </div>
+        </div>
+      );
+    }
 
-            {/* Game */}
-            <Card className="mb-8">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-white" />
+    if (showChallengeSetup) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <Link href="/" className="inline-flex items-center space-x-2 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                    YouGlow
+                  </span>
+                </Link>
+              </div>
+              {/* Progress */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
+                  <Badge className="bg-purple-100 text-purple-800">🎯 Challenge Setup</Badge>
                 </div>
-                <CardTitle className="text-2xl">{ingredientsGame.question}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 gap-3">
-                  {ingredientsGame.options.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={gameAnswer === option.value ? (option.correct ? "default" : "destructive") : "outline"}
-                      onClick={() => handleGameAnswer(option.value)}
-                      disabled={!!gameAnswer}
-                      className={`p-4 h-auto text-left justify-start ${
-                        gameAnswer === option.value && option.correct ? "bg-green-600 hover:bg-green-700" : ""
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {gameAnswer === option.value && (
-                          <div className="flex-shrink-0">
-                            {option.correct ? (
-                              <CheckCircle className="w-5 h-5 text-white" />
-                            ) : (
-                              <span className="text-white">❌</span>
-                            )}
+                <Progress value={progress} className="h-3" />
+              </div>
+              {/* Challenge Setup */}
+              <Card className="mb-8">
+                <CardHeader className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Target className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl">Want to commit to a skin challenge?</CardTitle>
+                  <p className="text-gray-600 mt-2">Optional - you can skip this step</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="challenge-title">Challenge Title</Label>
+                      <Input
+                        id="challenge-title"
+                        placeholder="e.g., My Clear Skin Journey"
+                        value={challengeData.title}
+                        onChange={(e) => setChallengeData((prev) => ({ ...prev, title: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Select skin concern:</Label>
+                      <RadioGroup
+                        value={challengeData.concern}
+                        onValueChange={(value) => setChallengeData((prev) => ({ ...prev, concern: value }))}
+                        className="grid grid-cols-2 gap-4 mt-2"
+                      >
+                        {["Acne", "Wrinkles", "Dryness", "Pigmentation", "Dullness"].map((concern) => (
+                          <div key={concern} className="flex items-center space-x-2">
+                            <RadioGroupItem value={concern.toLowerCase()} id={concern} />
+                            <Label htmlFor={concern}>{concern}</Label>
                           </div>
-                        )}
-                        <span className="font-medium">{option.label}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-
-                {gameAnswer && (
-                  <div className="mt-6 text-center">
-                    {ingredientsGame.options.find((opt) => opt.value === gameAnswer)?.correct ? (
-                      <div className="space-y-3">
-                        <div className="text-green-600 font-bold text-lg">✅ Correct!</div>
-                        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-                          <div className="flex items-center justify-center space-x-2">
-                            <Trophy className="w-5 h-5 text-yellow-600" />
-                            <span className="font-semibold text-yellow-800">Badge Unlocked: Ingredient Expert!</span>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                    <div>
+                      <Label>Target Improvement: {challengeData.improvement}%</Label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="90"
+                        value={challengeData.improvement}
+                        onChange={(e) =>
+                          setChallengeData((prev) => ({ ...prev, improvement: Number.parseInt(e.target.value) }))
+                        }
+                        className="w-full mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label>Duration:</Label>
+                      <RadioGroup
+                        value={challengeData.duration.toString()}
+                        onValueChange={(value) =>
+                          setChallengeData((prev) => ({ ...prev, duration: Number.parseInt(value) }))
+                        }
+                        className="grid grid-cols-2 gap-4 mt-2"
+                      >
+                        {[7, 14, 21, 28].map((days) => (
+                          <div key={days} className="flex items-center space-x-2">
+                            <RadioGroupItem value={days.toString()} id={`days-${days}`} />
+                            <Label htmlFor={`days-${days}`}>{days} days</Label>
                           </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                    <div>
+                      <Label>Have you tried any food-related skin challenges before?</Label>
+                      <RadioGroup
+                        value={challengeData.triedBefore}
+                        onValueChange={(value) => setChallengeData((prev) => ({ ...prev, triedBefore: value }))}
+                        className="flex space-x-6 mt-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="yes" id="tried-yes" />
+                          <Label htmlFor="tried-yes">Yes</Label>
                         </div>
-                        <p className="text-sm text-gray-600">
-                          Alcohol Denat can be very drying and irritating to the skin, especially for sensitive skin
-                          types.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="text-red-600 font-bold text-lg">Not quite right!</div>
-                        <p className="text-sm text-gray-600">
-                          The correct answer is Alcohol Denat - it can be very drying and irritating to the skin.
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="no" id="tried-no" />
+                          <Label htmlFor="tried-no">No</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    {challengeData.triedBefore === "yes" && (
+                      <div>
+                        <Label htmlFor="difficulties">What made them difficult for you?</Label>
+                        <Textarea
+                          id="difficulties"
+                          placeholder="e.g., Hard to stick to the diet, didn't see results fast enough..."
+                          value={challengeData.difficulties}
+                          onChange={(e) => setChallengeData((prev) => ({ ...prev, difficulties: e.target.value }))}
+                          className="mt-2"
+                        />
                       </div>
                     )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Email Capture Screen
-  if (showEmailCapture) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  YouGlow
-                </span>
-              </Link>
-            </div>
-
-            {/* Progress */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
-                <Badge className="bg-blue-100 text-blue-800">📧 Almost Done</Badge>
-              </div>
-              <Progress value={progress} className="h-3" />
-            </div>
-
-            {/* Email Capture */}
-            <Card className="mb-8">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-2xl">Where should we send your personalized skin report?</CardTitle>
-                <p className="text-gray-600 mt-2">
-                  Get your free personal plan + before & after progress tracking via email
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <Input
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="text-center text-lg p-4"
-                    required
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                      <p className="text-sm font-medium">Personalized Plan</p>
-                    </div>
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <Target className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                      <p className="text-sm font-medium">Progress Tracking</p>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <Sparkles className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                      <p className="text-sm font-medium">AI Recommendations</p>
-                    </div>
+                  <div className="flex space-x-4">
+                    <Button
+                      onClick={handleChallengeSubmit}
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                    >
+                      Create My Challenge
+                    </Button>
+                    <Button variant="outline" onClick={skipChallenge} className="flex-1">
+                      Skip Challenge
+                    </Button>
                   </div>
-                </div>
-
-                <Button
-                  onClick={handleEmailSubmit}
-                  disabled={!email}
-                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-4 text-lg"
-                >
-                  Get My Personalized Report
+                </CardContent>
+              </Card>
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Navigation */}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )
-  }
+      );
+    }
 
-  // Challenge Setup Screen
-  if (showChallengeSetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  YouGlow
-                </span>
-              </Link>
-            </div>
-
-            {/* Progress */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-600">{Math.round(progress)}% completed</span>
-                <Badge className="bg-purple-100 text-purple-800">🎯 Challenge Setup</Badge>
+    if (showResults) {
+      const { planTitle, planDescription } = getPersonalizedPlan();
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <Link href="/" className="inline-flex items-center space-x-2 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                    YouGlow
+                  </span>
+                </Link>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{planTitle} is Ready!</h1>
+                <p className="text-lg text-gray-600">{planDescription}</p>
+                {earnedBadge && (
+                  <div className="mt-4 inline-flex items-center space-x-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full">
+                    <Trophy className="w-5 h-5" />
+                    <span className="font-semibold">Ingredient Expert Badge Earned!</span>
+                  </div>
+                )}
               </div>
-              <Progress value={progress} className="h-3" />
-            </div>
-
-            {/* Challenge Setup */}
-            <Card className="mb-8">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-white" />
+              {/* Limited Time Offer Banner */}
+              <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-2xl p-6 mb-8 text-center">
+                <h2 className="text-2xl font-bold mb-2">Limited-Time Offer — 50% Off for 10 Minutes Only</h2>
+                <p className="mb-4">Your personal glow plan is reserved for the next {formatTime(timeLeft)} minutes</p>
+                <div className="flex items-center justify-center space-x-2 text-2xl font-bold mb-4">
+                  <Clock className="w-6 h-6" />
+                  <span>{formatTime(timeLeft)}</span>
                 </div>
-                <CardTitle className="text-2xl">Want to commit to a skin challenge?</CardTitle>
-                <p className="text-gray-600 mt-2">Optional - you can skip this step</p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="challenge-title">Challenge Title</Label>
-                    <Input
-                      id="challenge-title"
-                      placeholder="e.g., My Clear Skin Journey"
-                      value={challengeData.title}
-                      onChange={(e) => setChallengeData((prev) => ({ ...prev, title: e.target.value }))}
-                    />
+                <Button
+                  onClick={() => document.getElementById("pricing-section")?.scrollIntoView({ behavior: "smooth" })}
+                  className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Get Now - 50% Off!
+                </Button>
+              </div>
+              {/* Monica's Success Story */}
+              <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-4">
+                    <Star className="w-6 h-6 text-yellow-400 fill-current" />
+                    <h2 className="text-2xl font-bold text-gray-900">Real Story: Monica's Glow-Up</h2>
+                    <Star className="w-6 h-6 text-yellow-400 fill-current" />
                   </div>
-
-                  <div>
-                    <Label>Select skin concern:</Label>
-                    <RadioGroup
-                      value={challengeData.concern}
-                      onValueChange={(value) => setChallengeData((prev) => ({ ...prev, concern: value }))}
-                      className="grid grid-cols-2 gap-4 mt-2"
-                    >
-                      {["Acne", "Wrinkles", "Dryness", "Pigmentation", "Dullness"].map((concern) => (
-                        <div key={concern} className="flex items-center space-x-2">
-                          <RadioGroupItem value={concern.toLowerCase()} id={concern} />
-                          <Label htmlFor={concern}>{concern}</Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-
-                  <div>
-                    <Label>Target Improvement: {challengeData.improvement}%</Label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="90"
-                      value={challengeData.improvement}
-                      onChange={(e) =>
-                        setChallengeData((prev) => ({ ...prev, improvement: Number.parseInt(e.target.value) }))
-                      }
-                      className="w-full mt-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Duration:</Label>
-                    <RadioGroup
-                      value={challengeData.duration.toString()}
-                      onValueChange={(value) =>
-                        setChallengeData((prev) => ({ ...prev, duration: Number.parseInt(value) }))
-                      }
-                      className="grid grid-cols-2 gap-4 mt-2"
-                    >
-                      {[7, 14, 21, 28].map((days) => (
-                        <div key={days} className="flex items-center space-x-2">
-                          <RadioGroupItem value={days.toString()} id={`days-${days}`} />
-                          <Label htmlFor={`days-${days}`}>{days} days</Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-
-                  <div>
-                    <Label>Have you tried any food-related skin challenges before?</Label>
-                    <RadioGroup
-                      value={challengeData.triedBefore}
-                      onValueChange={(value) => setChallengeData((prev) => ({ ...prev, triedBefore: value }))}
-                      className="flex space-x-6 mt-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="yes" id="tried-yes" />
-                        <Label htmlFor="tried-yes">Yes</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="no" id="tried-no" />
-                        <Label htmlFor="tried-no">No</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {challengeData.triedBefore === "yes" && (
-                    <div>
-                      <Label htmlFor="difficulties">What made them difficult for you?</Label>
-                      <Textarea
-                        id="difficulties"
-                        placeholder="e.g., Hard to stick to the diet, didn't see results fast enough..."
-                        value={challengeData.difficulties}
-                        onChange={(e) => setChallengeData((prev) => ({ ...prev, difficulties: e.target.value }))}
-                        className="mt-2"
-                      />
+                  <p className="text-lg font-semibold text-green-800 mb-4">
+                    Before You Start — Check Out Monica's Results!
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
+                      <p className="text-gray-700 italic text-lg leading-relaxed">
+                        "I've struggled with acne for years. I tried everything — creams, treatments, strict diets.
+                        Nothing worked. Then I found YouGlow. After following my personalized skin-food plan and tips for
+                        4 weeks, my skin cleared up like never before. I feel confident again!"
+                      </p>
+                      <p className="text-right text-green-600 font-semibold mt-4">— Monica</p>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex space-x-4">
-                  <Button
-                    onClick={handleChallengeSubmit}
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
-                  >
-                    Create My Challenge
-                  </Button>
-                  <Button variant="outline" onClick={skipChallenge} className="flex-1">
-                    Skip Challenge
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Navigation */}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={prevQuestion} className="flex items-center space-x-2">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Results Screen (same as before)
-  if (showResults) {
-    const { planTitle, planDescription } = getPersonalizedPlan()
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  YouGlow
-                </span>
-              </Link>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{planTitle} is Ready!</h1>
-              <p className="text-lg text-gray-600">{planDescription}</p>
-
-              {earnedBadge && (
-                <div className="mt-4 inline-flex items-center space-x-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full">
-                  <Trophy className="w-5 h-5" />
-                  <span className="font-semibold">Ingredient Expert Badge Earned!</span>
-                </div>
-              )}
-            </div>
-
-            {/* Limited Time Offer Banner */}
-            <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-2xl p-6 mb-8 text-center">
-              <h2 className="text-2xl font-bold mb-2">Limited-Time Offer — 50% Off for 10 Minutes Only</h2>
-              <p className="mb-4">Your personal glow plan is reserved for the next {formatTime(timeLeft)} minutes</p>
-              <div className="flex items-center justify-center space-x-2 text-2xl font-bold mb-4">
-                <Clock className="w-6 h-6" />
-                <span>{formatTime(timeLeft)}</span>
-              </div>
-              <Button
-                onClick={() => document.getElementById("pricing-section")?.scrollIntoView({ behavior: "smooth" })}
-                className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Get Now - 50% Off!
-              </Button>
-            </div>
-
-            {/* Monica's Success Story */}
-            <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-              <CardHeader className="text-center">
-                <div className="flex items-center justify-center space-x-2 mb-4">
-                  <Star className="w-6 h-6 text-yellow-400 fill-current" />
-                  <h2 className="text-2xl font-bold text-gray-900">Real Story: Monica's Glow-Up</h2>
-                  <Star className="w-6 h-6 text-yellow-400 fill-current" />
-                </div>
-                <p className="text-lg font-semibold text-green-800 mb-4">
-                  Before You Start — Check Out Monica's Results!
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Testimonial Quote */}
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
-                    <p className="text-gray-700 italic text-lg leading-relaxed">
-                      "I've struggled with acne for years. I tried everything — creams, treatments, strict diets.
-                      Nothing worked. Then I found YouGlow. After following my personalized skin-food plan and tips for
-                      4 weeks, my skin cleared up like never before. I feel confident again!"
-                    </p>
-                    <p className="text-right text-green-600 font-semibold mt-4">— Monica</p>
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4">📸 Before & After Photos:</h3>
+                      <p className="text-gray-600 mb-4">Monica's skin transformation after just 4 weeks!</p>
+                      <div className="relative rounded-2xl overflow-hidden shadow-lg max-w-2xl mx-auto">
+                        <Image
+                          src="/images/monica-before-after.png"
+                          alt="Monica's before and after skin transformation showing clear improvement in acne"
+                          width={800}
+                          height={400}
+                          className="w-full h-auto"
+                        />
+                        <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                          BEFORE
+                        </div>
+                        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                          AFTER
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Acne-Free Glow</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Custom skin-friendly recipes</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Ingredient scanner to avoid hidden skin triggers</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Daily tips tailored to my skin type</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Personal challenges to stay motivated</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-center bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-6">
+                      <p className="text-green-800 font-semibold text-lg mb-2">
+                        Ready to get the same results as Monica?
+                      </p>
+                      <p className="text-green-700">Your personalized plan is waiting below! ⬇️</p>
+                    </div>
                   </div>
-
-                  {/* Before & After Photos */}
-                  <div className="text-center">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">📸 Before & After Photos:</h3>
-                    <p className="text-gray-600 mb-4">Monica's skin transformation after just 4 weeks!</p>
-                    <div className="relative rounded-2xl overflow-hidden shadow-lg max-w-2xl mx-auto">
+                </CardContent>
+              </Card>
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle className="text-center text-2xl">✨ Features Included in Your Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">GlowBot AI Assistant</h3>
+                          <p className="text-sm text-gray-600">Weekly personal check-ins, progress tips, and reminders</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          📸
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Skin Analyzer</h3>
+                          <p className="text-sm text-gray-600">
+                            Upload skin photos and track real-time AI progress analytics
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          🍲
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Personalized Recipes</h3>
+                          <p className="text-sm text-gray-600">
+                            Skin-friendly food recommendations tailored to your goals
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          🏷️
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Food & Product Label Scanner</h3>
+                          <p className="text-sm text-gray-600">
+                            Snap a product label and get instant skin compatibility feedback
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          🎯
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Skin Challenges</h3>
+                          <p className="text-sm text-gray-600">
+                            Join weekly challenges to improve your skin health habits
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          📊
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Skin Health Dashboard</h3>
+                          <p className="text-sm text-gray-600">
+                            Visual tracking of your skin scores and lifestyle habits
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle className="text-center">🌟 What Our Customers Say</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center mb-6">
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-md mx-auto">
                       <Image
-                        src="/images/monica-before-after.png"
-                        alt="Monica's before and after skin transformation showing clear improvement in acne"
-                        width={800}
-                        height={400}
-                        className="w-full h-auto"
+                        src={testimonials[currentTestimonial].image || "/placeholder.svg"}
+                        alt={testimonials[currentTestimonial].name}
+                        width={60}
+                        height={60}
+                        className="rounded-full mx-auto mb-4"
                       />
-                      <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        BEFORE
+                      <div className="flex justify-center mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                        ))}
                       </div>
-                      <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        AFTER
-                      </div>
+                      <p className="text-sm text-gray-700 mb-3">"{testimonials[currentTestimonial].text}"</p>
+                      <p className="font-semibold text-gray-900">{testimonials[currentTestimonial].name}</p>
+                      <p className="text-xs text-green-600 font-medium">
+                        ✨ {testimonials[currentTestimonial].beforeAfter}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Results List */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-medium">Acne-Free Glow</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-medium">Custom skin-friendly recipes</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-medium">Ingredient scanner to avoid hidden skin triggers</span>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-medium">Daily tips tailored to my skin type</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="font-medium">Personal challenges to stay motivated</span>
-                      </div>
+                  <div className="text-center">
+                    <div className="inline-flex items-center space-x-2 bg-green-50 text-green-800 px-4 py-2 rounded-full text-sm">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>{liveRegistrations[currentRegistration]}</span>
                     </div>
                   </div>
-
-                  {/* Call to Action */}
-                  <div className="text-center bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-6">
-                    <p className="text-green-800 font-semibold text-lg mb-2">
-                      Ready to get the same results as Monica?
-                    </p>
-                    <p className="text-green-700">Your personalized plan is waiting below! ⬇️</p>
+                </CardContent>
+              </Card>
+              <Card id="pricing-section" className="mb-8">
+                <CardHeader>
+                  <CardTitle className="text-center">Choose Your Glow Journey</CardTitle>
+                  <div className="text-center">
+                    <Badge className="bg-red-100 text-red-800">50% OFF - Limited Time</Badge>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Features Included */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="text-center text-2xl">✨ Features Included in Your Plan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-4 h-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">GlowBot AI Assistant</h3>
-                        <p className="text-sm text-gray-600">Weekly personal check-ins, progress tips, and reminders</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        📸
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Skin Analyzer</h3>
-                        <p className="text-sm text-gray-600">
-                          Upload skin photos and track real-time AI progress analytics
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        🍲
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Personalized Recipes</h3>
-                        <p className="text-sm text-gray-600">
-                          Skin-friendly food recommendations tailored to your goals
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        🏷️
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Food & Product Label Scanner</h3>
-                        <p className="text-sm text-gray-600">
-                          Snap a product label and get instant skin compatibility feedback
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        🎯
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Skin Challenges</h3>
-                        <p className="text-sm text-gray-600">
-                          Join weekly challenges to improve your skin health habits
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        📊
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Skin Health Dashboard</h3>
-                        <p className="text-sm text-gray-600">
-                          Visual tracking of your skin scores and lifestyle habits
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Customer Reviews */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="text-center">🌟 What Our Customers Say</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center mb-6">
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-md mx-auto">
-                    <Image
-                      src={testimonials[currentTestimonial].image || "/placeholder.svg"}
-                      alt={testimonials[currentTestimonial].name}
-                      width={60}
-                      height={60}
-                      className="rounded-full mx-auto mb-4"
-                    />
-                    <div className="flex justify-center mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <p className="text-sm text-gray-700 mb-3">"{testimonials[currentTestimonial].text}"</p>
-                    <p className="font-semibold text-gray-900">{testimonials[currentTestimonial].name}</p>
-                    <p className="text-xs text-green-600 font-medium">
-                      ✨ {testimonials[currentTestimonial].beforeAfter}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Live Registration Feed */}
-                <div className="text-center">
-                  <div className="inline-flex items-center space-x-2 bg-green-50 text-green-800 px-4 py-2 rounded-full text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>{liveRegistrations[currentRegistration]}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Package Options */}
-            <Card id="pricing-section" className="mb-8">
-              <CardHeader>
-                <CardTitle className="text-center">Choose Your Glow Journey</CardTitle>
-                <div className="text-center">
-                  <Badge className="bg-red-100 text-red-800">50% OFF - Limited Time</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {plans.map((plan, index) => (
-                    <div
-                      key={index}
-                      className={`relative rounded-2xl border-2 p-6 ${
-                        plan.popular
-                          ? "border-pink-400 bg-gradient-to-br from-pink-50 to-purple-50 shadow-lg scale-105"
-                          : "border-gray-200 bg-white hover:border-pink-200 hover:shadow-md"
-                      } transition-all duration-300`}
-                    >
-                      {/* Badge */}
-                      {plan.badge && (
-                        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                          <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                            {plan.badge}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Plan Name */}
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">{plan.name}</h3>
-
-                      {/* Pricing */}
-                      <div className="text-center mb-6">
-                        <div className="flex items-center justify-center space-x-2 mb-2">
-                          <span className="text-3xl font-bold text-gray-900">${plan.discountedPrice}</span>
-                          <span className="text-lg text-gray-500 line-through">${plan.originalPrice}</span>
-                        </div>
-                        <div className="text-sm text-pink-600 font-medium">${plan.perDay}/day</div>
-                      </div>
-
-                      {/* CTA Button */}
-                      <Button
-                        onClick={() => redirectToCheckout(plan.id)}
-                        className={`w-full py-3 rounded-full font-semibold text-lg ${
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {plans.map((plan, index) => (
+                      <div
+                        key={index}
+                        className={`relative rounded-2xl border-2 p-6 ${
                           plan.popular
-                            ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg"
-                            : "bg-gray-900 hover:bg-gray-800 text-white"
-                        }`}
+                            ? "border-pink-400 bg-gradient-to-br from-pink-50 to-purple-50 shadow-lg scale-105"
+                            : "border-gray-200 bg-white hover:border-pink-200 hover:shadow-md"
+                        } transition-all duration-300`}
                       >
-                        {timeLeft > 0 ? `Reserved for: ${formatTime(timeLeft)} - Get Now!` : "Get Your Plan Now!"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Guarantees */}
-                <div className="mt-8 text-center">
-                  <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-4 h-4 text-green-600" />
-                      <span>30-day money-back guarantee</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span>No obligations. Cancel anytime.</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-blue-600" />
-                      <span>Join 50,000+ happy users</span>
+                        {plan.badge && (
+                          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                            <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                              {plan.badge}
+                            </div>
+                          </div>
+                        )}
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">{plan.name}</h3>
+                        <div className="text-center mb-6">
+                          <div className="flex items-center justify-center space-x-2 mb-2">
+                            <span className="text-3xl font-bold text-gray-900">${plan.discountedPrice}</span>
+                            <span className="text-lg text-gray-500 line-through">${plan.originalPrice}</span>
+                          </div>
+                          <div className="text-sm text-pink-600 font-medium">${plan.perDay}/day</div>
+                        </div>
+                        <Button
+                          onClick={() => redirectToCheckout(plan.id)}
+                          className={`w-full py-3 rounded-full font-semibold text-lg ${
+                            plan.popular
+                              ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg"
+                              : "bg-gray-900 hover:bg-gray-800 text-white"
+                          }`}
+                        >
+                          {timeLeft > 0 ? `Reserved for: ${formatTime(timeLeft)} - Get Now!` : "Get Your Plan Now!"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 text-center">
+                    <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-4 h-4 text-green-600" />
+                        <span>30-day money-back guarantee</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span>No obligations. Cancel anytime.</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span>Join 50,000+ happy users</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
-    )
-  }
+      );
+    }
 
-  // Main Quiz Questions
-  const currentQ = quizQuestions[currentQuestion];
-
-  return (
-    <>
-      <Suspense fallback={null}>
-        <QuizUrlStateHandler
-          showResults={showResults}
-          answers={answers}
-          email={email}
-          currentQuestion={currentQuestion}
-          setShowResults={setShowResults}
-          setAnswers={setAnswers}
-          setEmail={setEmail}
-          setShowGame={setShowGame}
-          setGameCompleted={setGameCompleted}
-          setShowEmailCapture={setShowEmailCapture}
-          setShowChallengeSetup={setShowChallengeSetup}
-        />
-      </Suspense>
-
+    const currentQ = quizQuestions[currentQuestion];
+    return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto">
@@ -1431,7 +1346,6 @@ export default function QuizPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Let's Personalize Your Plan</h1>
               <p className="text-lg text-gray-600">Answer questions to get your custom skin glow strategy</p>
             </div>
-
             {/* Progress */}
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
@@ -1440,7 +1354,6 @@ export default function QuizPage() {
               </div>
               <Progress value={progress} className="h-3" />
             </div>
-
             {/* Question Card */}
             <Card className="mb-8">
               <CardHeader>
@@ -1468,7 +1381,6 @@ export default function QuizPage() {
                     ))}
                   </RadioGroup>
                 )}
-
                 {currentQ.type === "checkbox" && (
                   <div className="space-y-4">
                     {currentQ.options?.map((option) => (
@@ -1494,7 +1406,6 @@ export default function QuizPage() {
                     ))}
                   </div>
                 )}
-
                 {currentQ.type === "text" && (
                   <Textarea
                     placeholder={currentQ.placeholder}
@@ -1505,7 +1416,6 @@ export default function QuizPage() {
                 )}
               </CardContent>
             </Card>
-
             {/* Navigation Buttons */}
             <div className="flex justify-between">
               <Button
@@ -1517,7 +1427,6 @@ export default function QuizPage() {
                 <ArrowLeft className="w-4 h-4" />
                 <span>Previous</span>
               </Button>
-
               <Button
                 onClick={nextQuestion}
                 disabled={
@@ -1533,6 +1442,35 @@ export default function QuizPage() {
           </div>
         </div>
       </div>
+    );
+  };
+
+  const quizUrlStateHandlerProps = {
+    showResults,
+    answers,
+    email,
+    currentQuestion,
+    setShowResults,
+    setAnswers,
+    setEmail,
+    setShowGame,
+    setGameCompleted,
+    setShowEmailCapture,
+    setShowChallengeSetup,
+    setIsInitializing,
+  };
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <QuizUrlStateHandler {...quizUrlStateHandlerProps} />
+      </Suspense>
+      {isInitializing ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div>Loading Quiz...</div>
+        </div>
+      ) : renderQuizContent()}
     </>
   );
 }
+>>>>>>> REPLACE
