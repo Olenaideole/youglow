@@ -29,6 +29,8 @@ import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { redirectToCheckout } from "@/lib/stripe-client";
 
+export const dynamic = 'force-dynamic';
+
 const quizQuestions = [
   // Demographics
   {
