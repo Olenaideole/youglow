@@ -80,9 +80,10 @@ if (isV0Preview) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn("Missing Supabase environment variables, using mock client")
+      console.warn("lib/supabase: Client-side Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", supabaseUrl, "NEXT_PUBLIC_SUPABASE_ANON_KEY:", supabaseAnonKey, "Falling back to mock client.");
       supabaseClient = createMockSupabaseClient()
     } else {
+      console.log("lib/supabase: Initializing real client-side Supabase client. URL:", supabaseUrl, "Anon Key (first 5 chars):", supabaseAnonKey?.substring(0,5));
       supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
@@ -113,10 +114,11 @@ export const createServerClient = () => {
     const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!serverUrl || !serverKey) {
-      console.warn("Missing Supabase server environment variables, using mock")
+      console.warn("lib/supabase: Server-side Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", serverUrl, "SUPABASE_SERVICE_ROLE_KEY:", serverKey, "Falling back to mock client.");
       return createMockSupabaseClient()
     }
 
+    console.log("lib/supabase: Initializing real server-side Supabase client. URL:", serverUrl, "Service Key (first 5 chars):", serverKey?.substring(0,5));
     return createClient(serverUrl, serverKey, {
       auth: {
         persistSession: false,
