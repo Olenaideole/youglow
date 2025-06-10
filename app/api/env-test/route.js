@@ -1,19 +1,19 @@
-STRIPE_WEBHOOK_SECRET=whsec_tsqJc8aPbvWYVkXbdvmygwSVROYPNDhD
-STRIPE_SECRET_KEY=sk_live_51Qvi2THrpqSlBlhjfJeNaQIhmMMErGWL9EtDvaSTPOT3g2fuSTLO$
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_51Qvi2THrpqSlBlhjUvRCQTL8Eu86IbXrs6E$
+STRIPE_WEBHOOK_SECRET=****************************
+STRIPE_SECRET_KEY=********************
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=*********************
 NEXT_PUBLIC_ENABLE_MOCK_AUTH= 
-XAI_API_KEY=xai-186os07tiHfLRQKvJDhRhT30iCbQVWfSwf5okLNdqmzMXrgCjhaAUkU9s5wcZGR$
+XAI_API_KEY=*******************
 POSTGRES_URL=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E50G@aws-0-us$
 POSTGRES_PRISMA_URL=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E50G@a$
 SUPABASE_URL=https://fkdnwzxainirielrpfzm.supabase.co
 NEXT_PUBLIC_SUPABASE_URL=https://fkdnwzxainirielrpfzm.supabase.co
 POSTGRES_URL_NON_POOLING=postgres://postgres.fkdnwzxainirielrpfzm:Jc0goay3nhX3E$
-SUPABASE_JWT_SECRET=pyS8mvoyZrYTYApG7rQxflURmu1sIqcxaUuzid3AzsXw3vmg+mtWU9Ivr5P$
+SUPABASE_JWT_SECRET=*********************
 POSTGRES_USER=postgres
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz$
+NEXT_PUBLIC_SUPABASE_ANON_KEY=************************
 POSTGRES_PASSWORD=Jc0goay3nhX3E50G
 POSTGRES_DATABASE=postgres
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh$
+SUPABASE_SERVICE_ROLE_KEY=***************
 POSTGRES_HOST=db.fkdnwzxainirielrpfzm.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs$
+SUPABASE_ANON_KEY=*************************
 
