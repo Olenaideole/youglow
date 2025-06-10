@@ -3,10 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { Check, Crown, Zap } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { redirectToCheckout } from "@/lib/stripe-client";
 
 const plans = [
   {
     name: "1 Week",
+    planId: "1-week",
     price: "$6.93",
     originalPrice: "$17.77",
     perDay: "$0.99",
@@ -16,6 +18,7 @@ const plans = [
   },
   {
     name: "4 Weeks",
+    planId: "4-weeks",
     price: "$15.19",
     originalPrice: "$38.95",
     perDay: "$0.54",
@@ -33,6 +36,7 @@ const plans = [
   },
   {
     name: "12 Weeks",
+    planId: "12-weeks",
     price: "$34.99",
     originalPrice: "$89.72",
     perDay: "$0.42",
@@ -109,7 +113,7 @@ export function PricingSection() {
 
               {/* CTA Button */}
               <Button
-                onClick={() => router.push(`/checkout?plan=${plan.name.toLowerCase().replace(" ", "-")}`)}
+                onClick={() => redirectToCheckout(plan.planId)}
                 className={`w-full py-3 rounded-full font-semibold text-lg ${
                   plan.popular
                     ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg"
