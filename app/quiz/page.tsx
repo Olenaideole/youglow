@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { redirectToCheckout } from "@/lib/stripe-client";
 
 const quizQuestions = [
@@ -470,6 +470,7 @@ export default function QuizPage() {
   const [earnedBadge, setEarnedBadge] = useState(false)
 
   const router = useRouter()
+  const searchParams = useSearchParams();
 
   // Replace the current currentStep and progress calculation with this:
   const totalSteps = quizQuestions.length + 4 // questions + game + email + challenge + results
@@ -528,6 +529,53 @@ export default function QuizPage() {
     }
   }, [showResults])
 
+  useEffect(() => {
+    const step = searchParams.get('step');
+    if (step === 'results') {
+      // Only attempt to restore if results are not already shown (to prevent re-running on other state changes)
+      // And if answers/email are potentially missing (e.g. after a page refresh)
+      if (!showResults) {
+          try {
+              const savedAnswers = sessionStorage.getItem('quizAnswers');
+              if (savedAnswers) {
+                  const parsedAnswers = JSON.parse(savedAnswers);
+                  // Ensure we only set state if there are actually saved answers
+                  if (Object.keys(parsedAnswers).length > 0) {
+                      setAnswers(parsedAnswers);
+                  }
+              }
+
+              const savedEmail = sessionStorage.getItem('quizEmail');
+              if (savedEmail) {
+                  setEmail(savedEmail);
+              }
+          } catch (e) {
+              console.error("Error restoring quiz data from sessionStorage:", e);
+          }
+      }
+
+      // Set view states
+      setShowGame(false);
+      setGameCompleted(true);
+      setShowEmailCapture(false);
+      setShowChallengeSetup(false);
+      setShowResults(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    // Clear session storage if the quiz is at the beginning and not showing results
+    if (currentQuestion === 0 && !searchParams.get('step')) {
+      try {
+        sessionStorage.removeItem('quizAnswers');
+        sessionStorage.removeItem('quizEmail');
+      } catch (e) {
+        console.error("Error clearing quiz data from sessionStorage:", e);
+      }
+    }
+  }, [currentQuestion, searchParams]);
+
   const handleAnswer = (value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [quizQuestions[currentQuestion].id]: value }))
   }
@@ -580,14 +628,32 @@ export default function QuizPage() {
   }
 
   const handleChallengeSubmit = () => {
-    setShowChallengeSetup(false)
-    setShowResults(true)
-  }
+    setShowChallengeSetup(false);
+    setShowResults(true);
+    try {
+      sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+      if (email) { // Only save email if it exists
+        sessionStorage.setItem('quizEmail', email);
+      }
+    } catch (e) {
+      console.error("Error saving quiz data to sessionStorage:", e);
+    }
+    router.push('/quiz?step=results', undefined, { shallow: true });
+  };
 
   const skipChallenge = () => {
-    setShowChallengeSetup(false)
-    setShowResults(true)
-  }
+    setShowChallengeSetup(false);
+    setShowResults(true);
+    try {
+      sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+      if (email) {
+        sessionStorage.setItem('quizEmail', email);
+      }
+    } catch (e) {
+      console.error("Error saving quiz data to sessionStorage:", e);
+    }
+    router.push('/quiz?step=results', undefined, { shallow: true });
+  };
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
