@@ -16,7 +16,7 @@ interface ReportData {
  */
 export async function sendPersonalizedReportEmail(userEmail: string, reportData: ReportData): Promise<void> {
   // The name of your Supabase Edge Function
-  const edgeFunctionName = 'smooth-processor'; // MODIFIED HERE
+  const edgeFunctionName = 'bright-api'; // MODIFIED HERE
 
   console.log(`Attempting to send report to ${userEmail} via Supabase Edge Function '${edgeFunctionName}'...`);
 
