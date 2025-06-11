@@ -1,18 +1,27 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-console.log("'send-report-email' (or user's 'smooth-processor') function booting up.");
+// --- SMTP Client Import ---
+// IMPORTANT: User needs to verify this import URL and the library's API.
+// Assuming 'deno_smtp' is a valid library. Common paths are /mod.ts or /client.ts
+import { SMTPClient } from 'https://deno.land/x/deno_smtp/client.ts'; // User to verify this path and library version if needed
+
+console.log("'send-report-email' (or user's 'smooth-processor') function booting up with SMTP support.");
 
 // --- Environment Variables ---
 // These MUST be set in the Supabase Edge Function's environment settings via the Supabase dashboard.
 
-// For Supabase client (if used within this function for other tasks like logging)
+// For Supabase client (if used)
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // User confirmed this name
 
-// For Email Provider (e.g., Resend) - CRITICAL FOR EMAIL SENDING
-const EMAIL_PROVIDER_API_KEY = Deno.env.get('RESEND_API_KEY'); // Or SENDGRID_API_KEY, etc.
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com'; // Default if not set
+// For SMTP Configuration - CRITICAL FOR EMAIL SENDING
+const SMTP_HOST = Deno.env.get('SMTP_HOST');
+const SMTP_PORT_STR = Deno.env.get('SMTP_PORT');
+const SMTP_USER = Deno.env.get('SMTP_USER');
+const SMTP_PASS = Deno.env.get('SMTP_PASS');
+const SMTP_SECURE_STR = Deno.env.get('SMTP_SECURE'); // e.g., 'true' or 'false', for STARTTLS/TLS
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com';
 
 let supabaseAdmin: SupabaseClient | null = null;
 if (supabaseUrl && serviceRoleKey) {
@@ -25,124 +34,131 @@ if (supabaseUrl && serviceRoleKey) {
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', // Ensure 'content-type' is allowed
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
         'Access-Control-Allow-Methods': 'POST',
       }
     });
   }
 
-  let email: string | undefined;
+  let recipientEmail: string | undefined;
   let report: { title?: string; content?: string; recommendations?: string } | undefined;
 
   try {
-    // 1. Parse request body
     const body = await req.json();
-    email = body.email;
+    recipientEmail = body.email;
     report = body.report;
 
-    // 2. Validate parameters
-    if (!email || typeof email !== 'string') {
-      console.warn("[Edge Function] Bad request: 'email' is missing or not a string.", body);
+    if (!recipientEmail || typeof recipientEmail !== 'string') {
+      console.warn("[Edge Function] Bad request: 'email' is missing or invalid.", body);
       return new Response(JSON.stringify({ success: false, error: "Bad request: 'email' parameter is missing or invalid." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
       });
     }
-    if (!report || typeof report !== 'object' || !report.title || !report.content) { // Basic check
+    if (!report || typeof report !== 'object' || !report.title || !report.content) {
       console.warn("[Edge Function] Bad request: 'report' object is missing or malformed.", body);
-      return new Response(JSON.stringify({ success: false, error: "Bad request: 'report' parameter is missing or malformed (requires at least title and content)." }), {
+      return new Response(JSON.stringify({ success: false, error: "Bad request: 'report' parameter is missing or malformed." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
       });
     }
 
-    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${email}`);
+    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${recipientEmail} via SMTP.`);
 
-    // 3. Check for Email Provider Configuration
-    if (!EMAIL_PROVIDER_API_KEY) {
-      console.error("[Edge Function] CRITICAL: Email provider API key (e.g., RESEND_API_KEY) is not configured in environment variables.");
-      // This error should ideally not reach the client if the system is well-configured,
-      // but it's a server-side operational issue.
-      return new Response(JSON.stringify({ success: false, error: "Email service not configured on server." }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500, // Internal Server Error
+    // Validate SMTP Configuration
+    if (!SMTP_HOST || !SMTP_PORT_STR || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL) {
+      console.error("[Edge Function] CRITICAL: SMTP configuration (HOST, PORT, USER, PASS, FROM_EMAIL) is incomplete in environment variables.");
+      return new Response(JSON.stringify({ success: false, error: "SMTP service not configured correctly on server." }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
       });
     }
-    if (!FROM_EMAIL) {
-        console.error("[Edge Function] CRITICAL: FROM_EMAIL is not configured in environment variables.");
-        return new Response(JSON.stringify({ success: false, error: "Sender email address not configured on server." }), {
+    const SMTP_PORT = parseInt(SMTP_PORT_STR, 10);
+    if (isNaN(SMTP_PORT)) {
+        console.error("[Edge Function] CRITICAL: SMTP_PORT is not a valid number.");
+        return new Response(JSON.stringify({ success: false, error: "SMTP port configuration is invalid." }), {
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
         });
     }
+    // Determine security: 'true' (ignore case) means use TLS/STARTTLS. Exact mechanism depends on library.
+    // deno_smtp typically uses `starttls: true` or `secure: true` options, or infers from port.
+    // Let's assume the library handles `secure: true` for TLS on standard ports (587 for STARTTLS, 465 for SSL/TLS).
+    const useSecure = SMTP_SECURE_STR?.toLowerCase() === 'true';
 
-    // 4. Actual Email Sending Logic (Example with Resend)
-    //    Replace this with your actual email provider's SDK or API call.
-    console.log(`[Edge Function] Attempting to send email via provider... From: ${FROM_EMAIL}`);
-    // const resendResponse = await fetch('https://api.resend.com/emails', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${EMAIL_PROVIDER_API_KEY}`,
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify({
-    //     from: FROM_EMAIL,
-    //     to: email,
-    //     subject: report.title || 'Your Personalized Skin Report',
-    //     html: `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`,
-    //   }),
-    // });
+    const client = new SMTPClient({
+      connection: {
+        hostname: SMTP_HOST,
+        port: SMTP_PORT,
+        // tls: useSecure, // For some libraries, explicit TLS true/false
+        // For deno_smtp, it might be something like:
+        // auth: { user: SMTP_USER, pass: SMTP_PASS },
+        // secure: useSecure, // if it supports a 'secure' option directly
+        // starttls: useSecure && SMTP_PORT !== 465, // Example: use STARTTLS if secure and not implicit SSL port
+      },
+      // deno_smtp specific options might be different. This is a generic structure.
+      // The actual options for deno_smtp need to be confirmed from its documentation.
+      // For example, it might be:
+      // client = new SMTPClient();
+      // await client.connect({ hostname: SMTP_HOST, port: SMTP_PORT, username: SMTP_USER, password: SMTP_PASS, useSsl: useSecure (for port 465), startTls: useSecure (for port 587) });
+    });
 
-    // if (!resendResponse.ok) {
-    //   const errorBody = await resendResponse.text(); // Use .text() first, then try to parse if needed
-    //   console.error(`[Edge Function] Email provider API error: ${resendResponse.status}`, errorBody);
-    //   throw new Error(`Email provider failed with status ${resendResponse.status}: ${errorBody}`);
-    // }
+    // IMPORTANT: The following is a conceptual structure for using an SMTP client.
+    // The exact methods and options for 'deno_smtp' need to be verified from its documentation.
+    console.log(`[Edge Function] Attempting to send email via SMTP to ${recipientEmail}... Host: ${SMTP_HOST}:${SMTP_PORT}`);
 
-    // const responseData = await resendResponse.json();
-    // console.log(`[Edge Function] Email successfully sent to ${email}. Provider Response ID: ${responseData.id}`);
+    // This is a common pattern but may vary for deno_smtp:
+    await client.connectTLS({ // Or connect(), connectSSL() or similar depending on library and SMTP_SECURE
+        hostname: SMTP_HOST,
+        port: SMTP_PORT,
+        username: SMTP_USER,
+        password: SMTP_PASS,
+    });
+    // Or, if connect is separate from send:
+    // await client.connect({ hostname: SMTP_HOST, port: SMTP_PORT });
+    // if (useSecure && SMTP_PORT !== 465) await client.startTLS(); // If STARTTLS is explicit
+    // await client.auth({ username: SMTP_USER, password: SMTP_PASS });
 
-    // ** SIMULATED EMAIL SENDING SUCCESS - Remove/replace the above block **
-    // This simulation is here because the actual implementation depends on the user's email provider.
-    // The previous logs showed "{ message: 'Hello undefined!' }" which means this part was likely not implemented or failing silently.
-    console.warn("[Edge Function] SIMULATING email send. Actual email sending logic needs to be implemented.");
-    const simulatedEmailResponse = {
-        id: `simulated_${Date.now()}`,
-        message: `Email to ${email} processed (simulated). Report: ${report.title}`
-    };
-    // ** END OF SIMULATION **
 
-    // Example of logging to a Supabase table (if supabaseAdmin is initialized)
-    // if (supabaseAdmin) {
-    //   const { error: logError } = await supabaseAdmin.from('email_logs').insert({
-    //     recipient_email: email,
-    //     report_title: report.title,
-    //     status: 'simulated_success', // or actual success/failure
-    //     provider_response_id: simulatedEmailResponse.id
-    //   });
-    //   if (logError) console.error("[Edge Function] Error logging to Supabase table:", logError);
-    // }
+    const subject = report.title || 'Your Personalized Skin Report';
+    const htmlBody = `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`;
+    const textBody = `Report: ${report.title}
+
+${report.content}
+
+${report.recommendations ? `Recommendations:
+${report.recommendations}` : ''}`;
+
+    await client.send({
+      from: FROM_EMAIL,
+      to: recipientEmail,
+      subject: subject,
+      content: textBody, // Plain text version
+      html: htmlBody,    // HTML version
+    });
+
+    await client.close(); // Or client.quit()
+    console.log(`[Edge Function] Email successfully sent to ${recipientEmail} via SMTP.`);
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Report email for "${report.title}" processed for ${email}. (Simulated - check server logs)`,
-      details: simulatedEmailResponse // Or actual responseData from provider
+      message: `Report email for "${report.title}" sent to ${recipientEmail} via SMTP.`
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 200,
     });
 
   } catch (error: any) {
-    console.error('[Edge Function] Error processing request:', error.message, error.stack);
-    // Ensure the error message sent to client is generic for security if it's an unexpected internal error.
-    let clientErrorMessage = 'An unexpected error occurred while processing the email request.';
-    if (error.message.startsWith("Email provider failed")) { // If it's a known error type from our code
-        clientErrorMessage = `Failed to send email: ${error.message}`;
-    } else if (error instanceof SyntaxError && req.json === undefined) { // Error parsing request body
-        clientErrorMessage = "Invalid request format: Could not parse JSON body.";
-    }
+    console.error('[Edge Function] SMTP Email Sending Error:', error.message, error.stack, error.cause);
+    // Try to get more specific SMTP error codes or messages if the library provides them
+    let detail = error.message;
+    if (error.smtpMessage) detail += ` (SMTP: ${error.smtpMessage})`;
+    if (error.code) detail += ` (Code: ${error.code})`;
 
-    return new Response(JSON.stringify({ success: false, error: clientErrorMessage, details: error.message }), {
+    return new Response(JSON.stringify({
+        success: false,
+        error: "Failed to send email via SMTP.",
+        details: detail
+    }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
     });
   }
