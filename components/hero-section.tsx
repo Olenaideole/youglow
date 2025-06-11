@@ -22,11 +22,7 @@ export function HeroSection() {
 
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Your Skin, Your{" "}
-            <span className="bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              Glow
-            </span>
-            , Your Rules.
+            Glow Like You’ve Always Dreamed with Your AI Skin & Nutrition Coach
           </h1>
 
           {/* Subheadline */}
