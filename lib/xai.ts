@@ -4,27 +4,46 @@ interface QuizAnswers {
 }
 
 // Interface for the xAI API response (adjust based on actual API response)
-interface XaiApiResponse {
-  report: {
-    title: string;
-    content: string;
-    recommendations: string;
-  };
+// interface XaiApiResponse { // Old structure
+//   report: {
+//     title: string;
+//     content: string;
+//     recommendations: string;
+//   };
+// }
+
+interface ReportStructure { // This is what we expect the AI's content string to parse into
+  title: string;
+  content: string;
+  recommendations: string;
 }
 
-export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiResponse['report']> {
-  // const XAI_API_ENDPOINT_ENV = process.env.XAI_API_ENDPOINT; // Retain for future reference
-  const XAI_API_KEY = process.env.XAI_API_KEY;
+interface XaiChatMessage {
+  role: "user" | "assistant";
+  content: string; // For the assistant, this content will be a JSON string representing ReportStructure
+}
 
-  // Hardcode the endpoint as per user request
+interface XaiChoice {
+  message: XaiChatMessage;
+  // Potentially other fields like 'finish_reason', 'index', etc.
+  // We only care about 'message' for now.
+}
+
+interface XaiApiResponse {
+  choices: XaiChoice[];
+  // Potentially other fields like 'id', 'object', 'created', 'model', 'usage', etc.
+  // We only care about 'choices' for now.
+}
+
+export async function generateSkinReport(answers: QuizAnswers): Promise<ReportStructure> { // MODIFIED return type
+  const XAI_API_KEY = process.env.XAI_API_KEY;
   const XAI_API_ENDPOINT = "https://api.x.ai/v1/chat/completions";
 
-  console.log(`Using xAI API Endpoint: ${XAI_API_ENDPOINT}`); // Log the endpoint being used
+  console.log(`Using xAI API Endpoint: ${XAI_API_ENDPOINT}`);
 
   if (!XAI_API_KEY) {
     throw new Error('xAI API key is not configured. Please set XAI_API_KEY environment variable.');
   }
-  // The hardcoded XAI_API_ENDPOINT will always be defined here.
 
   let answersPart = '';
   for (const [key, value] of Object.entries(answers)) {
@@ -45,50 +64,40 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
     Format the output as a JSON object with keys: "title", "content", "recommendations".
   `;
 
-  console.log("Constructed xAI Prompt:", prompt);
+  console.log("Constructed xAI Prompt (first 200 chars):", prompt.substring(0,200) + "...");
 
-  if (process.env.NODE_ENV !== 'production' && XAI_API_KEY === 'mock-key-for-simulation-only') { // Updated simulation condition
-    console.log('Simulating xAI API call as XAI_API_KEY is for simulation or NODE_ENV is not production...');
+  // Simulation logic (can be kept as is, or updated to return ReportStructure)
+  if (process.env.NODE_ENV !== 'production' && XAI_API_KEY === 'mock-key-for-simulation-only') {
+    console.log('Simulating xAI API call...');
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve({
-          title: 'Your Simulated Personalized Skin Report (Hardcoded Endpoint)',
-          content: 'This report was generated based on a simulated xAI API call using a hardcoded endpoint.',
-          recommendations: 'Simulated recommendations include: use sunscreen, stay hydrated. Consult a dermatologist for professional advice.',
+        resolve({ // Return type matches ReportStructure
+          title: 'Simulated Report Title',
+          content: 'Simulated report content based on answers.',
+          recommendations: 'Simulated recommendations: drink water, use sunscreen.',
         });
       }, 1000);
     });
   }
 
   try {
-    const response = await fetch(XAI_API_ENDPOINT, { // This will use the hardcoded endpoint
+    const response = await fetch(XAI_API_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
-        messages: [
-          {
-            role: "user",
-            content: prompt // The constructed prompt string
-          }
-        ],
+        messages: [{ role: "user", content: prompt }],
         model: "grok-2"
       }),
     });
 
     if (!response.ok) {
-      const errorBody = await response.text(); // Get raw text for more detailed error
+      const errorBody = await response.text();
       console.error('xAI API request failed:', response.status, errorBody);
-      // Attempt to parse errorBody if it's JSON, otherwise use raw text
       let parsedError = errorBody;
-      try {
-        parsedError = JSON.parse(errorBody);
-      } catch (e) {
-        // Not JSON, use raw errorBody
-      }
-      // It might be useful to throw an error object that includes the status and body
+      try { parsedError = JSON.parse(errorBody); } catch (e) { /* not json */ }
       const apiError = new Error(`xAI API request failed with status ${response.status}`);
       // @ts-ignore
       apiError.status = response.status;
@@ -97,29 +106,42 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
       throw apiError;
     }
 
-    const data: XaiApiResponse = await response.json(); // Assuming XaiApiResponse needs to be adjusted if the response schema also changes. For now, assume 'data.report' is still valid or the API adapts.
-                                                        // If the API returns the report directly inside the 'choices' array like many chat completion APIs, this will need adjustment.
-                                                        // Let's assume for now the error was only about the request format and the response will still somehow give us data.report or similar.
-                                                        // A typical chat completion response is more like:
-                                                        // { choices: [ { message: { role: "assistant", content: "report_json_string" } } ] }
-                                                        // If so, XaiApiResponse and data extraction need to change.
-                                                        // For now, only fixing the request format.
+    const data: XaiApiResponse = await response.json(); // Uses new XaiApiResponse interface
 
-    // IMPORTANT: The XaiApiResponse and how `data.report` is extracted might need to change
-    // if the API's response for a /chat/completions endpoint follows typical patterns
-    // (e.g., response.choices[0].message.content).
-    // This subtask will *not* change XaiApiResponse or data.report yet, focusing only on fixing the input error.
-    // If the API returns the report as a JSON string within the assistant's message,
-    // data.report would need to become something like JSON.parse(data.choices[0].message.content).report
-    return data.report; // This line might fail if the response structure is different.
+    // MODIFIED data extraction logic:
+    if (!data.choices || data.choices.length === 0) {
+      console.error('xAI API response missing choices array or choices are empty:', data);
+      throw new Error('Invalid response structure from xAI API: No choices found.');
+    }
+
+    const assistantMessage = data.choices[0].message;
+    if (assistantMessage.role !== 'assistant' || !assistantMessage.content) {
+      console.error('xAI API response missing assistant message or content:', assistantMessage);
+      throw new Error('Invalid response structure from xAI API: Assistant message is invalid.');
+    }
+
+    try {
+      const reportContentString = assistantMessage.content;
+      console.log("Received content string from assistant:", reportContentString.substring(0, 200) + "..."); // Log received string
+      const parsedReport: ReportStructure = JSON.parse(reportContentString);
+
+      if (!parsedReport.title || !parsedReport.content || !parsedReport.recommendations) {
+          console.error('Parsed report from xAI is missing required fields (title, content, recommendations):', parsedReport);
+          throw new Error('Parsed report from xAI is malformed.');
+      }
+      return parsedReport; // Return the parsed structure
+
+    } catch (e: any) {
+      console.error('Failed to parse assistant message content as JSON:', assistantMessage.content, e);
+      throw new Error(`Failed to parse report from xAI API response: ${e.message}`);
+    }
 
   } catch (error: any) {
-    // Log the full error if available, not just the re-thrown one
     console.error('Error calling xAI API or processing its response:', error);
     if (error.status && error.body) {
         console.error('API Error Details:', 'Status:', error.status, 'Body:', JSON.stringify(error.body));
          throw new Error(`Failed to generate skin report via xAI API. Status: ${error.status}. Message: ${(typeof error.body === 'string' ? error.body : JSON.stringify(error.body?.error || error.body))}`);
     }
-    throw new Error('Failed to generate skin report via xAI API.');
+    throw new Error(`Failed to generate skin report via xAI API: ${error.message}`);
   }
 }
