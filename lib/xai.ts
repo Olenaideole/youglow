@@ -20,19 +20,26 @@ interface XaiApiResponse {
  * @throws An error if the API call fails.
  */
 export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiResponse['report']> {
-  const XAI_API_ENDPOINT = process.env.XAI_API_ENDPOINT; // Ensure this is set in your .env files
-  const XAI_API_KEY = process.env.XAI_API_KEY;           // Ensure this is set in your .env files
+  const XAI_API_ENDPOINT = process.env.XAI_API_ENDPOINT;
+  const XAI_API_KEY = process.env.XAI_API_KEY;
 
   if (!XAI_API_ENDPOINT || !XAI_API_KEY) {
     throw new Error('xAI API endpoint or key is not configured. Please set XAI_API_ENDPOINT and XAI_API_KEY environment variables.');
   }
 
-  // Construct the prompt for the xAI API based on the answers
-  // This is a simplified example. You'll need to tailor this to your specific prompt requirements.
+  // Construct the part of the prompt that lists answers
+  let answersPart = '';
+  for (const [key, value] of Object.entries(answers)) {
+    const formattedValue = Array.isArray(value) ? value.join(', ') : value;
+    answersPart += `- ${key}: ${formattedValue}\n    `; // Use '\n' for newline, then indent for next possible line
+  }
+  // Remove trailing newline and spaces if any
+  answersPart = answersPart.trimEnd();
+
+
   const prompt = `
     Generate a personalized skin improvement report based on the following user quiz responses:
-    ${Object.entries(answers).map(([key, value]) => `- ${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('
-    ')}
+    ${answersPart}
 
     The report should include:
     1. A title for the report.
@@ -42,17 +49,16 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
     Format the output as a JSON object with keys: "title", "content", "recommendations".
   `;
 
-  console.log("Constructed xAI Prompt:", prompt); // For debugging
+  console.log("Constructed xAI Prompt:", prompt);
 
-  // Simulate API call for now
-  if (process.env.NODE_ENV !== 'production') { // Avoid actual API calls in dev/test if not intended
+  if (process.env.NODE_ENV !== 'production') {
     console.log('Simulating xAI API call...');
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
           title: 'Your Simulated Personalized Skin Report',
-          content: 'This report was generated based on a simulated xAI API call. It includes a summary of potential skin concerns derived from your answers.',
-          recommendations: 'Simulated recommendations include: drink more water, use a gentle cleanser, and consider a vitamin C serum. Consult a dermatologist for professional advice.',
+          content: 'This report was generated based on a simulated xAI API call...',
+          recommendations: 'Simulated recommendations include: drink more water...',
         });
       }, 1000);
     });
@@ -67,8 +73,6 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
       },
       body: JSON.stringify({
         prompt: prompt,
-        // Add any other parameters required by the xAI API
-        // e.g., max_tokens, temperature, model
       }),
     });
 
