@@ -894,7 +894,7 @@ export default function QuizPage() {
                               : "bg-gray-900 hover:bg-gray-800 text-white"
                           }`}
                         >
-                          {timeLeft > 0 ? `Reserved for: ${formatTime(timeLeft)} - Get Now!` : "Get Your Plan Now!"}
+                          {timeLeft > 0 ? `Offer Ends: ${formatTime(timeLeft)} - Get Now!` : "Get Your Plan Now!"}
                         </Button>
                       </div>
                     ))}
