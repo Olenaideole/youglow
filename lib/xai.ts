@@ -12,30 +12,26 @@ interface XaiApiResponse {
   };
 }
 
-/**
- * Generates a personalized skin report using the xAI API.
- *
- * @param answers The user's quiz answers.
- * @returns A promise that resolves to the generated skin report.
- * @throws An error if the API call fails.
- */
 export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiResponse['report']> {
-  const XAI_API_ENDPOINT = process.env.XAI_API_ENDPOINT;
+  // const XAI_API_ENDPOINT_ENV = process.env.XAI_API_ENDPOINT; // Retain for future reference
   const XAI_API_KEY = process.env.XAI_API_KEY;
 
-  if (!XAI_API_ENDPOINT || !XAI_API_KEY) {
-    throw new Error('xAI API endpoint or key is not configured. Please set XAI_API_ENDPOINT and XAI_API_KEY environment variables.');
-  }
+  // Hardcode the endpoint as per user request
+  const XAI_API_ENDPOINT = "https://api.x.ai/v1/chat/completions";
 
-  // Construct the part of the prompt that lists answers
+  console.log(`Using xAI API Endpoint: ${XAI_API_ENDPOINT}`); // Log the endpoint being used
+
+  if (!XAI_API_KEY) {
+    throw new Error('xAI API key is not configured. Please set XAI_API_KEY environment variable.');
+  }
+  // The hardcoded XAI_API_ENDPOINT will always be defined here.
+
   let answersPart = '';
   for (const [key, value] of Object.entries(answers)) {
     const formattedValue = Array.isArray(value) ? value.join(', ') : value;
-    answersPart += `- ${key}: ${formattedValue}\n    `; // Use '\n' for newline, then indent for next possible line
+    answersPart += `- ${key}: ${formattedValue}\n    `;
   }
-  // Remove trailing newline and spaces if any
   answersPart = answersPart.trimEnd();
-
 
   const prompt = `
     Generate a personalized skin improvement report based on the following user quiz responses:
@@ -51,21 +47,21 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
 
   console.log("Constructed xAI Prompt:", prompt);
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Simulating xAI API call...');
+  if (process.env.NODE_ENV !== 'production' && XAI_API_KEY === 'mock-key-for-simulation-only') { // Updated simulation condition
+    console.log('Simulating xAI API call as XAI_API_KEY is for simulation or NODE_ENV is not production...');
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
-          title: 'Your Simulated Personalized Skin Report',
-          content: 'This report was generated based on a simulated xAI API call...',
-          recommendations: 'Simulated recommendations include: drink more water...',
+          title: 'Your Simulated Personalized Skin Report (Hardcoded Endpoint)',
+          content: 'This report was generated based on a simulated xAI API call using a hardcoded endpoint.',
+          recommendations: 'Simulated recommendations include: use sunscreen, stay hydrated. Consult a dermatologist for professional advice.',
         });
       }, 1000);
     });
   }
 
   try {
-    const response = await fetch(XAI_API_ENDPOINT, {
+    const response = await fetch(XAI_API_ENDPOINT, { // This will use the hardcoded endpoint
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,9 +69,7 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
       },
       body: JSON.stringify({
         prompt: prompt,
-        model: "grok-2" // Add the model parameter
-        // Add any other parameters required by the xAI API
-        // e.g., max_tokens, temperature
+        model: "grok-2"
       }),
     });
 
