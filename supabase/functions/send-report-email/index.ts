@@ -1,35 +1,28 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Log to confirm function startup
-console.log("'resend-email' (or 'send-report-email') function booting up.");
+console.log("'send-report-email' (or user's 'smooth-processor') function booting up.");
 
-// Environment variables for email provider (e.g., Resend)
-// These MUST be set in the Supabase Edge Function's environment settings.
-// const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-// const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com';
+// --- Environment Variables ---
+// These MUST be set in the Supabase Edge Function's environment settings via the Supabase dashboard.
 
-// Initialize Supabase client IF NEEDED within this function
-// Use the specific environment variable name provided by the user for the service role key.
+// For Supabase client (if used within this function for other tasks like logging)
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // User confirmed this name
+
+// For Email Provider (e.g., Resend) - CRITICAL FOR EMAIL SENDING
+const EMAIL_PROVIDER_API_KEY = Deno.env.get('RESEND_API_KEY'); // Or SENDGRID_API_KEY, etc.
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com'; // Default if not set
+
 let supabaseAdmin: SupabaseClient | null = null;
-const supabaseUrl = Deno.env.get('SUPABASE_URL'); // Standard env var
-const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // MODIFIED to SERVICE_ROLE
-
 if (supabaseUrl && serviceRoleKey) {
   supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      // Edge functions typically use the service role key which bypasses RLS.
-      // autoRefreshToken and persistSession are not relevant for server-side use with service role.
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false
-    }
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
   });
-  console.log("Supabase client initialized inside Edge Function using SERVICE_ROLE."); // MODIFIED
+  console.log("[Edge Function] Supabase client initialized using SERVICE_ROLE.");
 } else {
-  console.warn("Supabase client NOT initialized in Edge Function: SUPABASE_URL or SERVICE_ROLE missing."); // MODIFIED
+  console.warn("[Edge Function] Supabase client NOT initialized: SUPABASE_URL or SERVICE_ROLE missing.");
 }
-
 
 serve(async (req: Request) => {
   // Handle CORS preflight request
@@ -37,85 +30,119 @@ serve(async (req: Request) => {
     return new Response('ok', {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', // Ensure 'content-type' is allowed
         'Access-Control-Allow-Methods': 'POST',
       }
     });
   }
 
-  try {
-    const { email, report } = await req.json();
+  let email: string | undefined;
+  let report: { title?: string; content?: string; recommendations?: string } | undefined;
 
-    if (!email || !report) {
-      return new Response(JSON.stringify({ error: 'Missing email or report data' }), {
+  try {
+    // 1. Parse request body
+    const body = await req.json();
+    email = body.email;
+    report = body.report;
+
+    // 2. Validate parameters
+    if (!email || typeof email !== 'string') {
+      console.warn("[Edge Function] Bad request: 'email' is missing or not a string.", body);
+      return new Response(JSON.stringify({ success: false, error: "Bad request: 'email' parameter is missing or invalid." }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
+      });
+    }
+    if (!report || typeof report !== 'object' || !report.title || !report.content) { // Basic check
+      console.warn("[Edge Function] Bad request: 'report' object is missing or malformed.", body);
+      return new Response(JSON.stringify({ success: false, error: "Bad request: 'report' parameter is missing or malformed (requires at least title and content)." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
       });
     }
 
-    console.log(`[Edge Function] Received request to send email to: ${email}`);
-    console.log(`[Edge Function] Report Title: ${report.title}`);
+    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${email}`);
 
-    // TODO: Implement actual email sending logic here using your chosen email provider
-    // This part is CRITICAL and relies on email provider (e.g., Resend) API keys being set as env vars.
-    // The error "API key is invalid" from previous logs indicates this part is failing.
-    // Example:
-    // if (!RESEND_API_KEY || !FROM_EMAIL) {
-    //   console.error("[Edge Function] Email provider API key or FROM_EMAIL is not configured.");
-    //   throw new Error("Email provider credentials missing in Edge Function environment.");
-    // }
-    // const emailResponse = await fetch('https://api.resend.com/emails', {
+    // 3. Check for Email Provider Configuration
+    if (!EMAIL_PROVIDER_API_KEY) {
+      console.error("[Edge Function] CRITICAL: Email provider API key (e.g., RESEND_API_KEY) is not configured in environment variables.");
+      // This error should ideally not reach the client if the system is well-configured,
+      // but it's a server-side operational issue.
+      return new Response(JSON.stringify({ success: false, error: "Email service not configured on server." }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500, // Internal Server Error
+      });
+    }
+    if (!FROM_EMAIL) {
+        console.error("[Edge Function] CRITICAL: FROM_EMAIL is not configured in environment variables.");
+        return new Response(JSON.stringify({ success: false, error: "Sender email address not configured on server." }), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
+        });
+    }
+
+    // 4. Actual Email Sending Logic (Example with Resend)
+    //    Replace this with your actual email provider's SDK or API call.
+    console.log(`[Edge Function] Attempting to send email via provider... From: ${FROM_EMAIL}`);
+    // const resendResponse = await fetch('https://api.resend.com/emails', {
     //   method: 'POST',
     //   headers: {
-    //     'Authorization': `Bearer ${RESEND_API_KEY}`,
+    //     'Authorization': `Bearer ${EMAIL_PROVIDER_API_KEY}`,
     //     'Content-Type': 'application/json'
     //   },
     //   body: JSON.stringify({
     //     from: FROM_EMAIL,
     //     to: email,
     //     subject: report.title || 'Your Personalized Skin Report',
-    //     html: `<h1>${report.title}</h1><p>${report.content}</p><p><b>Recommendations:</b> ${report.recommendations}</p>`,
+    //     html: `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`,
     //   }),
     // });
-    // if (!emailResponse.ok) {
-    //   const errorBody = await emailResponse.json(); // Or .text() if not JSON
-    //   console.error(`[Edge Function] Email provider API error: ${emailResponse.status}`, errorBody);
-    //   // Return the actual error from the email provider
-    //   return new Response(JSON.stringify({
-    //       success: false,
-    //       message: "Failed to send email via provider.",
-    //       provider_error: errorBody
-    //   }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500 });
+
+    // if (!resendResponse.ok) {
+    //   const errorBody = await resendResponse.text(); // Use .text() first, then try to parse if needed
+    //   console.error(`[Edge Function] Email provider API error: ${resendResponse.status}`, errorBody);
+    //   throw new Error(`Email provider failed with status ${resendResponse.status}: ${errorBody}`);
     // }
-    // console.log(`[Edge Function] Email successfully sent to ${email} via provider. ID: ${emailResponse.id}`);
-    // const emailProviderResponse = { success: true, messageId: emailResponse.id };
 
+    // const responseData = await resendResponse.json();
+    // console.log(`[Edge Function] Email successfully sent to ${email}. Provider Response ID: ${responseData.id}`);
 
-    // ** SIMULATED SUCCESS - REMOVE FOR PRODUCTION **
-    // The following simulates success if no actual email provider is configured.
-    // THIS IS WHERE THE "API key is invalid" error needs to be fixed by implementing the actual email sending logic above.
-    const simulatedSuccess = {
-      message: `[Simulated Email] Report task processed for: ${email}. Report title: ${report.title}.`,
-      emailQueued: true,
-      // THIS IS NOT A REAL SUCCESS FROM AN EMAIL PROVIDER
-      // The previous log showed: { statusCode: 400, message: 'API key is invalid', name: 'validation_error' }
-      // This indicates the actual email sending logic (commented out above) is what's failing.
+    // ** SIMULATED EMAIL SENDING SUCCESS - Remove/replace the above block **
+    // This simulation is here because the actual implementation depends on the user's email provider.
+    // The previous logs showed "{ message: 'Hello undefined!' }" which means this part was likely not implemented or failing silently.
+    console.warn("[Edge Function] SIMULATING email send. Actual email sending logic needs to be implemented.");
+    const simulatedEmailResponse = {
+        id: `simulated_${Date.now()}`,
+        message: `Email to ${email} processed (simulated). Report: ${report.title}`
     };
-    console.log(simulatedSuccess.message);
+    // ** END OF SIMULATION **
 
-
-    // If using supabaseAdmin for anything, it can be used here.
-    // e.g., await supabaseAdmin.from('logs').insert({ event: 'email_sent', user_email: email });
+    // Example of logging to a Supabase table (if supabaseAdmin is initialized)
+    // if (supabaseAdmin) {
+    //   const { error: logError } = await supabaseAdmin.from('email_logs').insert({
+    //     recipient_email: email,
+    //     report_title: report.title,
+    //     status: 'simulated_success', // or actual success/failure
+    //     provider_response_id: simulatedEmailResponse.id
+    //   });
+    //   if (logError) console.error("[Edge Function] Error logging to Supabase table:", logError);
+    // }
 
     return new Response(JSON.stringify({
       success: true,
-      data: simulatedSuccess // Replace with actual emailProviderResponse in production
+      message: `Report email for "${report.title}" processed for ${email}. (Simulated - check server logs)`,
+      details: simulatedEmailResponse // Or actual responseData from provider
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 200,
     });
 
   } catch (error: any) {
-    console.error('[Edge Function] Error processing request:', error);
-    return new Response(JSON.stringify({ error: error.message || 'An unknown error occurred' }), {
+    console.error('[Edge Function] Error processing request:', error.message, error.stack);
+    // Ensure the error message sent to client is generic for security if it's an unexpected internal error.
+    let clientErrorMessage = 'An unexpected error occurred while processing the email request.';
+    if (error.message.startsWith("Email provider failed")) { // If it's a known error type from our code
+        clientErrorMessage = `Failed to send email: ${error.message}`;
+    } else if (error instanceof SyntaxError && req.json === undefined) { // Error parsing request body
+        clientErrorMessage = "Invalid request format: Could not parse JSON body.";
+    }
+
+    return new Response(JSON.stringify({ success: false, error: clientErrorMessage, details: error.message }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
     });
   }
