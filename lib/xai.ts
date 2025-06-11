@@ -62,6 +62,8 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<ReportSt
     3. Actionable recommendations for skincare routines, lifestyle changes, and product suggestions.
 
     Format the output as a JSON object with keys: "title", "content", "recommendations".
+    IMPORTANT: Respond with *only* the raw JSON object, without any Markdown formatting (e.g., \`\`\`json ... \`\`\`), comments, or other explanatory text.
+    The entire response should be the JSON object itself.
   `;
 
   console.log("Constructed xAI Prompt (first 200 chars):", prompt.substring(0,200) + "...");
@@ -121,18 +123,35 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<ReportSt
     }
 
     try {
-      const reportContentString = assistantMessage.content;
-      console.log("Received content string from assistant:", reportContentString.substring(0, 200) + "..."); // Log received string
+      let reportContentString = assistantMessage.content;
+      console.log("Raw content string from assistant (first 200 chars):", reportContentString.substring(0, 200) + "...");
+
+      // Attempt to remove markdown fences.
+      // Handles ```json
+      // ...
+      // ``` or ```
+      // ...
+      // ```
+      // and also ```json ... ``` or ``` ... ``` (inline or without newline after opening fence)
+      // It first removes the prefix (e.g., "```json\n" or "```json ")
+      reportContentString = reportContentString.replace(/^```(?:json)?\s*\n?/, "");
+      // Then removes the suffix (e.g., "\n```" or " ```")
+      reportContentString = reportContentString.replace(/\s*\n?```$/, "");
+
+      // Trim any leading/trailing whitespace that might remain or be part of the original content
+      reportContentString = reportContentString.trim();
+
+      console.log("Cleaned content string for parsing (first 200 chars):", reportContentString.substring(0, 200) + "...");
       const parsedReport: ReportStructure = JSON.parse(reportContentString);
 
       if (!parsedReport.title || !parsedReport.content || !parsedReport.recommendations) {
           console.error('Parsed report from xAI is missing required fields (title, content, recommendations):', parsedReport);
           throw new Error('Parsed report from xAI is malformed.');
       }
-      return parsedReport; // Return the parsed structure
+      return parsedReport;
 
     } catch (e: any) {
-      console.error('Failed to parse assistant message content as JSON:', assistantMessage.content, e);
+      console.error('Failed to parse assistant message content as JSON. Original content (first 200 chars):', assistantMessage.content.substring(0,200) + "...", 'Error:', e);
       throw new Error(`Failed to parse report from xAI API response: ${e.message}`);
     }
 
