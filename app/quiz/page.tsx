@@ -28,6 +28,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { redirectToCheckout } from "@/lib/stripe-client";
+import { toast } from "sonner"; // Adjust path if necessary, e.g. "@/components/ui/use-toast" and then const { toast } = useToast();
 
 // Interface and Component for URL State Handling
 interface QuizUrlStateHandlerProps {
@@ -162,6 +163,8 @@ export default function QuizPage() {
   const [currentRegistration, setCurrentRegistration] = useState(0);
   const [earnedBadge, setEarnedBadge] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  // const [reportError, setReportError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -256,10 +259,56 @@ export default function QuizPage() {
     }
   };
 
-  const handleEmailSubmit = () => {
-    if (email) {
-      setShowEmailCapture(false);
-      setShowChallengeSetup(true);
+  const handleEmailSubmit = async () => { // Make the function async
+    if (!email) return;
+    // setReportError(null); // Clear previous errors
+    setIsGeneratingReport(true);
+
+    try {
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          answers: answers, // The existing 'answers' state
+          email: email,     // The existing 'email' state
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Failed to generate report:', result.error, result.details);
+        toast.error("Failed to Generate Report", { // MODIFIED
+          description: `${result.details || result.error || 'An unknown error occurred. Please try again.'}`,
+        });
+      } else {
+        console.log('Report generation initiated:', result.message);
+        toast.success("Report Request Submitted!", { // ADDED
+          description: "Your personalized skin report is being generated and will be sent to your email shortly.",
+        });
+
+        setShowEmailCapture(false);
+        setShowChallengeSetup(true);
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+            if (email) {
+              sessionStorage.setItem('quizEmail', email);
+            }
+          } catch (e) {
+            console.error("Error saving quiz data to sessionStorage:", e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting email for report generation:', error);
+      toast.error("Network Error", { // MODIFIED
+        description: "A network error occurred. Please check your connection and try again.",
+      });
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -469,11 +518,14 @@ export default function QuizPage() {
                   </div>
                   <Button
                     onClick={handleEmailSubmit}
-                    disabled={!email}
+                    disabled={!email || isGeneratingReport} // Disable if email is empty or report is generating
                     className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-4 text-lg"
                   >
-                    Get My Personalized Report
+                    {isGeneratingReport ? 'Generating Your Report...' : 'Get My Personalized Report'}
                   </Button>
+                  {/* {reportError && (
+                      <p className="text-red-500 text-center mt-2">{reportError}</p>
+                  )} */}
                 </CardContent>
               </Card>
               <div className="flex justify-between">
