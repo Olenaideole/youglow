@@ -68,22 +68,58 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
         'Authorization': `Bearer ${XAI_API_KEY}`,
       },
       body: JSON.stringify({
-        prompt: prompt,
+        messages: [
+          {
+            role: "user",
+            content: prompt // The constructed prompt string
+          }
+        ],
         model: "grok-2"
       }),
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
+      const errorBody = await response.text(); // Get raw text for more detailed error
       console.error('xAI API request failed:', response.status, errorBody);
-      throw new Error(`xAI API request failed with status ${response.status}: ${errorBody}`);
+      // Attempt to parse errorBody if it's JSON, otherwise use raw text
+      let parsedError = errorBody;
+      try {
+        parsedError = JSON.parse(errorBody);
+      } catch (e) {
+        // Not JSON, use raw errorBody
+      }
+      // It might be useful to throw an error object that includes the status and body
+      const apiError = new Error(`xAI API request failed with status ${response.status}`);
+      // @ts-ignore
+      apiError.status = response.status;
+      // @ts-ignore
+      apiError.body = parsedError;
+      throw apiError;
     }
 
-    const data: XaiApiResponse = await response.json();
-    return data.report;
+    const data: XaiApiResponse = await response.json(); // Assuming XaiApiResponse needs to be adjusted if the response schema also changes. For now, assume 'data.report' is still valid or the API adapts.
+                                                        // If the API returns the report directly inside the 'choices' array like many chat completion APIs, this will need adjustment.
+                                                        // Let's assume for now the error was only about the request format and the response will still somehow give us data.report or similar.
+                                                        // A typical chat completion response is more like:
+                                                        // { choices: [ { message: { role: "assistant", content: "report_json_string" } } ] }
+                                                        // If so, XaiApiResponse and data extraction need to change.
+                                                        // For now, only fixing the request format.
 
-  } catch (error) {
-    console.error('Error calling xAI API:', error);
+    // IMPORTANT: The XaiApiResponse and how `data.report` is extracted might need to change
+    // if the API's response for a /chat/completions endpoint follows typical patterns
+    // (e.g., response.choices[0].message.content).
+    // This subtask will *not* change XaiApiResponse or data.report yet, focusing only on fixing the input error.
+    // If the API returns the report as a JSON string within the assistant's message,
+    // data.report would need to become something like JSON.parse(data.choices[0].message.content).report
+    return data.report; // This line might fail if the response structure is different.
+
+  } catch (error: any) {
+    // Log the full error if available, not just the re-thrown one
+    console.error('Error calling xAI API or processing its response:', error);
+    if (error.status && error.body) {
+        console.error('API Error Details:', 'Status:', error.status, 'Body:', JSON.stringify(error.body));
+         throw new Error(`Failed to generate skin report via xAI API. Status: ${error.status}. Message: ${(typeof error.body === 'string' ? error.body : JSON.stringify(error.body?.error || error.body))}`);
+    }
     throw new Error('Failed to generate skin report via xAI API.');
   }
 }
