@@ -721,6 +721,10 @@ export default function QuizPage() {
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-medium">Ingredient scanner to avoid hidden skin triggers</span>
                         </div>
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">AI GlowBot for instant advice</span>
+                        </div>
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">
