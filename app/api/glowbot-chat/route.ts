@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${xaiApiKey}`,
       },
       body: JSON.stringify({
-        model: "grok-3-mini",
+        model: "grok-2",
         messages: apiMessages,
         max_tokens: 500, // Adjusted for potentially detailed responses
         temperature: 0.7,
