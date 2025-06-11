@@ -13,7 +13,7 @@ console.log("'resend-email' (or 'send-report-email') function booting up.");
 // Use the specific environment variable name provided by the user for the service role key.
 let supabaseAdmin: SupabaseClient | null = null;
 const supabaseUrl = Deno.env.get('SUPABASE_URL'); // Standard env var
-const serviceRoleKey = Deno.env.get('SERVICEROLE_KEY'); // User-specified new env var name
+const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // MODIFIED to SERVICE_ROLE
 
 if (supabaseUrl && serviceRoleKey) {
   supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -25,9 +25,9 @@ if (supabaseUrl && serviceRoleKey) {
       detectSessionInUrl: false
     }
   });
-  console.log("Supabase client initialized inside Edge Function using SERVICEROLE_KEY.");
+  console.log("Supabase client initialized inside Edge Function using SERVICE_ROLE."); // MODIFIED
 } else {
-  console.warn("Supabase client NOT initialized in Edge Function: SUPABASE_URL or SERVICEROLE_KEY missing.");
+  console.warn("Supabase client NOT initialized in Edge Function: SUPABASE_URL or SERVICE_ROLE missing."); // MODIFIED
 }
 
 
