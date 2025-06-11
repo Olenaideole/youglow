@@ -53,19 +53,10 @@ export function GlowBotChat() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [latestSkinReport, setLatestSkinReport] = useState<SkinReport | null>(null)
-  const [isApiConfigured, setIsApiConfigured] = useState(true) // New state for API key check
+  // Removed isApiConfigured state
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Check for API key on component mount
-  useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_XAI_API_KEY
-    if (!apiKey) {
-      console.warn("CRITICAL: NEXT_PUBLIC_XAI_API_KEY is not set. GlowBot may not function correctly.")
-      setIsApiConfigured(false)
-      // Optionally, add a user-facing message to initialMessages or a new state
-      // For now, we'll just log a warning and set the state.
-    }
-  }, [])
+  // Removed useEffect for API key check
 
   // Load chat history from localStorage on component mount
   useEffect(() => {
@@ -153,86 +144,61 @@ export function GlowBotChat() {
       return
     }
 
-    // Format skin data for the prompt
-    let formattedSkinData = `Skin Type: ${fetchedReport.skin_type || "Not specified"}. Overall Score: ${fetchedReport.overall_score || "Not available"}/100.`
-    if (fetchedReport.scores) {
-      formattedSkinData += ` Specific scores (out of 10) - Acne: ${fetchedReport.scores.acne}, Dryness: ${fetchedReport.scores.dryness}, Oiliness: ${fetchedReport.scores.oiliness}, Redness: ${fetchedReport.scores.redness}, Dark Circles: ${fetchedReport.scores.darkCircles}, Texture: ${fetchedReport.scores.texture}.`
-    }
-    if (fetchedReport.recommendations) {
-      if (fetchedReport.recommendations.skincare?.length) {
-        formattedSkinData += ` Skincare recommendations: ${fetchedReport.recommendations.skincare.join(", ")}.`
-      }
-      if (fetchedReport.recommendations.diet?.length) {
-        formattedSkinData += ` Diet recommendations: ${fetchedReport.recommendations.diet.join(", ")}.`
-      }
-      if (fetchedReport.recommendations.lifestyle?.length) {
-        formattedSkinData += ` Lifestyle recommendations: ${fetchedReport.recommendations.lifestyle.join(", ")}.`
-      }
-    }
-
-    const apiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Here is my latest skin analysis data: ${formattedSkinData}. Now, please answer my question: ${userMessage.content}` }
-    ];
+    // Removed direct xAI API call logic.
+    // The SYSTEM_PROMPT and detailed skin data formatting will now be handled by the backend.
 
     try {
-      const xaiResponse = await fetch("https://api.x.ai/v1/chat/completions", {
+      const response = await fetch("/api/glowbot-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_XAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "grok-1.5-flash-latest",
-          messages: apiMessages,
-          max_tokens: 500,
-          temperature: 0.7,
+          userMessage: currentInput, // Send the raw user input
+          latestSkinReport: fetchedReport, // Send the fetched report (can be null)
         }),
-      })
+      });
 
-      if (!xaiResponse.ok) {
-        const errorData = await xaiResponse.json()
-        console.error("xAI API Error:", errorData)
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("API Error:", data.error || "Unknown error");
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: "Sorry, I encountered an error trying to get a response. Please try again.",
+          content: data.error || "Sorry, I couldn't get a response. Please try again.",
           sender: "bot",
           timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, botMessage])
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      } else if (data.botMessage) {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: data.botMessage.trim(),
+          sender: "bot",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
       } else {
-        const xaiResult = await xaiResponse.json()
-        const botResponseContent = xaiResult.choices[0]?.message?.content
-        if (botResponseContent) {
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: botResponseContent.trim(),
-            sender: "bot",
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, botMessage])
-        } else {
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: "Sorry, I received an empty response. Please try again.",
-            sender: "bot",
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, botMessage])
-        }
+        // Handle cases where response is ok but no botMessage (should ideally not happen with current backend)
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "Sorry, I received an unexpected response. Please try again.",
+          sender: "bot",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
       }
     } catch (error) {
-      console.error("Failed to fetch from xAI API:", error)
+      console.error("Failed to fetch from /api/glowbot-chat:", error);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        // Updated user-friendly message
-        content: "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.",
+        content: "Sorry, I'm having trouble connecting. Please check your internet or try again in a moment.",
         sender: "bot",
         timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, botMessage])
+      };
+      setMessages((prev) => [...prev, botMessage]);
     } finally {
-      setIsTyping(false)
+      setIsTyping(false);
     }
   }
 
@@ -336,14 +302,14 @@ export function GlowBotChat() {
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={isApiConfigured ? "Ask GlowBot anything about skincare..." : "GlowBot is currently unavailable."}
+            placeholder="Ask GlowBot anything about skincare..." // Reverted placeholder
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
             className="flex-1"
-            disabled={!isApiConfigured || isTyping}
+            disabled={!inputValue.trim() || isTyping} // Simplified disabled logic
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isTyping || !isApiConfigured}
+            disabled={!inputValue.trim() || isTyping} // Simplified disabled logic
             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
           >
             <Send className="w-4 h-4" />
