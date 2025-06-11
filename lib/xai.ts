@@ -73,6 +73,9 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<XaiApiRe
       },
       body: JSON.stringify({
         prompt: prompt,
+        model: "grok-2" // Add the model parameter
+        // Add any other parameters required by the xAI API
+        // e.g., max_tokens, temperature
       }),
     });
 
