@@ -305,11 +305,11 @@ export function GlowBotChat() {
             placeholder="Ask GlowBot anything about skincare..." // Reverted placeholder
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
             className="flex-1"
-            disabled={!inputValue.trim() || isTyping} // Simplified disabled logic
+            disabled={isTyping} // Changed: Input is only disabled when isTyping
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isTyping} // Simplified disabled logic
+            disabled={!inputValue.trim() || isTyping} // Unchanged: Button disabled if input is empty OR isTyping
             className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
           >
             <Send className="w-4 h-4" />
