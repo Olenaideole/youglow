@@ -644,8 +644,8 @@ export default function QuizPage() {
                     YouGlow
                   </span>
                 </Link>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{planTitle} is Ready!</h1>
-                <p className="text-lg text-gray-600">{planDescription}</p>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Your Glow-Up Plan is Ready!</h1>
+                <p className="text-lg text-gray-600">Personalized nutrition, skin care routines, and daily AI tips designed to get your skin looking its best.</p>
                 {earnedBadge && (
                   <div className="mt-4 inline-flex items-center space-x-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full">
                     <Trophy className="w-5 h-5" />
