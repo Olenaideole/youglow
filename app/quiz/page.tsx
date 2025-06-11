@@ -888,7 +888,7 @@ export default function QuizPage() {
                         </div>
                         <Button
                           onClick={() => redirectToCheckout(plan.id)}
-                          className={`w-full py-3 rounded-full font-semibold text-lg ${
+                          className={`w-full py-3 rounded-full font-semibold text-base ${
                             plan.popular
                               ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg"
                               : "bg-gray-900 hover:bg-gray-800 text-white"
