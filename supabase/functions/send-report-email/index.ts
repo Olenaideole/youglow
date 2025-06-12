@@ -1,37 +1,35 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// --- SMTP Client Import ---
-// ACTION REQUIRED: User needs to import their chosen Deno SMTP library here.
-// Example: import { SomeSmtpFunctionOrClass } from 'https://deno.land/x/chosen_smtp_library/mod.ts';
-// The user reported an error with 'https://deno.land/x/smtp/mod.ts' not exporting 'sendMail'.
-// They need to find the correct import and API for the library they intend to use.
-console.log("[Edge Function] Template for SMTP. User needs to configure their specific SMTP library.");
+// --- Resend SDK Import ---
+// ACTION REQUIRED: User needs to verify this import URL and ensure the 'resend' library
+// is compatible with Deno Edge Functions. A common way is via esm.sh.
+// The user should replace "latest" with a specific version tag if possible.
+import { Resend } from 'https://esm.sh/resend@latest'; // User to verify version and compatibility
 
+console.log("[Edge Function] Template updated for Resend API. Function booting up.");
 
 // --- Environment Variables ---
-// These MUST be set in the Supabase Edge Function's environment settings via the Supabase dashboard.
+// These MUST be set in the Supabase Edge Function's environment settings.
 
-// For Supabase client (if used)
+// For Supabase client (if used for other tasks like logging)
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // User confirmed this name
+const serviceRoleKey = Deno.env.get('SERVICE_ROLE'); // User confirmed this name for Supabase client
 
-// For SMTP Configuration - CRITICAL FOR EMAIL SENDING
-const SMTP_HOST = Deno.env.get('SMTP_HOST');
-const SMTP_PORT_STR = Deno.env.get('SMTP_PORT');
-const SMTP_USER = Deno.env.get('SMTP_USER');
-const SMTP_PASS = Deno.env.get('SMTP_PASS');
-const SMTP_SECURE_STR = Deno.env.get('SMTP_SECURE'); // e.g., 'true' or 'false', for STARTTLS/TLS
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@yourdomain.com';
+// For Resend API - CRITICAL FOR EMAIL SENDING
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+// FROM_EMAIL for Resend should be a verified domain/email on Resend.
+// User's example: 'Acme <onboarding@resend.dev>' - this needs to be configured by the user.
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'YourConfiguredFromEmail@yourdomain.com'; // User MUST configure this
 
 let supabaseAdmin: SupabaseClient | null = null;
 if (supabaseUrl && serviceRoleKey) {
   supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
   });
-  console.log("[Edge Function] Supabase client initialized using SERVICE_ROLE.");
+  console.log("[Edge Function] Supabase client initialized (for potential other tasks).");
 } else {
-  console.warn("[Edge Function] Supabase client NOT initialized: SUPABASE_URL or SERVICE_ROLE missing.");
+  console.warn("[Edge Function] Supabase client NOT initialized: SUPABASE_URL or SERVICE_ROLE missing (this is for non-email tasks).");
 }
 
 serve(async (req: Request) => {
@@ -66,99 +64,60 @@ serve(async (req: Request) => {
       });
     }
 
-    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${recipientEmail} via SMTP.`);
+    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${recipientEmail} via Resend.`);
 
-    // Validate SMTP Configuration
-    if (!SMTP_HOST || !SMTP_PORT_STR || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL) {
-      console.error("[Edge Function] CRITICAL: SMTP configuration (HOST, PORT, USER, PASS, FROM_EMAIL) is incomplete in environment variables.");
-      return new Response(JSON.stringify({ success: false, error: "SMTP service not configured correctly on server." }), {
+    if (!RESEND_API_KEY) {
+      console.error("[Edge Function] CRITICAL: RESEND_API_KEY is not configured in environment variables.");
+      return new Response(JSON.stringify({ success: false, error: "Email service (Resend) API key not configured on server." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
       });
     }
-    const SMTP_PORT = parseInt(SMTP_PORT_STR, 10);
-    if (isNaN(SMTP_PORT)) {
-        console.error("[Edge Function] CRITICAL: SMTP_PORT is not a valid number.");
-        return new Response(JSON.stringify({ success: false, error: "SMTP port configuration is invalid." }), {
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
-        });
+     if (!FROM_EMAIL || FROM_EMAIL === 'YourConfiguredFromEmail@yourdomain.com') {
+      console.error("[Edge Function] CRITICAL: FROM_EMAIL is not configured in environment variables or is set to default placeholder.");
+      return new Response(JSON.stringify({ success: false, error: "Sender email address (FROM_EMAIL) not configured on server." }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
+      });
     }
-    const useSecure = SMTP_SECURE_STR?.toLowerCase() === 'true'; // Used to inform logic below
 
-    console.log(`[Edge Function] Attempting to send email via SMTP to ${recipientEmail}. Host: ${SMTP_HOST}:${SMTP_PORT}, Secure: ${useSecure}`);
 
-    // --- ACTION REQUIRED: Implement SMTP Email Sending Logic ---
-    // Replace the entire block below with the actual code for your chosen Deno SMTP library.
-    // You will need to:
-    // 1. Initialize your SMTP client using SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and useSecure.
-    // 2. Connect to the SMTP server (handle TLS/STARTTLS based on useSecure and port).
-    // 3. Authenticate with SMTP_USER and SMTP_PASS.
-    // 4. Construct the email (from: FROM_EMAIL, to: recipientEmail, subject, html body, text body).
-    // 5. Send the email.
-    // 6. Close the connection.
-    // 7. Handle any errors from the SMTP library specifically.
+    const resend = new Resend(RESEND_API_KEY);
 
-    // ** START: Placeholder for user's SMTP library code **
-    // Example (conceptual -  REPLACE THIS ENTIRE EXAMPLE BLOCK):
-    //
-    // // Step 1: Import your chosen library at the top of the file.
-    // // Step 2: Initialize the client (example, API will vary)
-    // const smtpClient = new YourChosenSmtpLibrary.Client({
-    //   hostname: SMTP_HOST,
-    //   port: SMTP_PORT,
-    //   username: SMTP_USER, // Library might call this 'user' or 'login'
-    //   password: SMTP_PASS,
-    //   secure: useSecure, // Or specific tls/starttls options based on library
-    // });
-    //
-    // // Step 3: Construct email content
-    // const subject = report.title || 'Your Personalized Skin Report';
-    // const htmlBody = `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`;
-    // const textBody = `Report: ${report.title}\n\n${report.content}\n\n${report.recommendations ? `Recommendations:\n${report.recommendations}` : ''}`;
-    //
-    // // Step 4: Send the email (example, API will vary)
-    // await smtpClient.send({
-    //   from: FROM_EMAIL,
-    //   to: recipientEmail,
-    //   subject: subject,
-    //   text: textBody,
-    //   html: htmlBody,
-    // });
-    // console.log(`[Edge Function] Placeholder: Email to ${recipientEmail} supposedly sent via SMTP.`);
-    //
-    // // Step 5: Close connection (if needed by library)
-    // // await smtpClient.close();
-    //
-    // ** END: Placeholder for user's SMTP library code **
+    const subject = report.title || 'Your Personalized Skin Report';
+    const htmlContent = `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`;
 
-    // If the above is not implemented, the function will effectively do nothing here or rely on old simulation.
-    // For now, to prevent errors if the above is not filled, let's keep a clear simulation message.
-    console.warn("[Edge Function] SMTP sending logic NOT IMPLEMENTED in template. User needs to fill this in. Simulating success.");
-    const simulatedEmailResponse = {
-        id: `simulated_smtp_${Date.now()}`,
-        message: `Email to ${recipientEmail} processed (simulated - SMTP logic pending user implementation). Report: ${report.title}`
-    };
+    console.log(`[Edge Function] Attempting to send email via Resend from: ${FROM_EMAIL} to: ${recipientEmail}`);
 
-    console.log(`[Edge Function] Email successfully processed (simulated) for ${recipientEmail} via SMTP placeholder.`);
+    const { data, error: resendError } = await resend.emails.send({
+      from: FROM_EMAIL, // User's example: 'Acme <onboarding@resend.dev>'
+      to: [recipientEmail], // Resend expects an array of strings
+      subject: subject,
+      html: htmlContent,
+    });
+
+    if (resendError) {
+      console.error("[Edge Function] Resend API error:", resendError);
+      // Consider logging resendError.message, resendError.name, resendError.statusCode if available
+      throw new Error(`Resend API failed: ${resendError.message || 'Unknown error'}`);
+    }
+
+    console.log(`[Edge Function] Email successfully sent to ${recipientEmail} via Resend. Email ID: ${data?.id}`);
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Report email for "${report.title}" processed for ${recipientEmail}. (SMTP logic pending user implementation)`,
-      details: simulatedEmailResponse
+      message: `Report email for "${report.title}" sent to ${recipientEmail} via Resend.`,
+      emailId: data?.id
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 200,
     });
 
   } catch (error: any) {
-    console.error('[Edge Function] SMTP Email Sending Error (or other processing error):', error.message, error.stack);
-    let detail = error.message;
-    // Add more specific SMTP error details if the chosen library provides them and they are caught.
-    // if (error.smtpDetails) detail += ` (SMTP Details: ${error.smtpDetails})`;
+    console.error('[Edge Function] Error processing Resend email request:', error.message, error.stack);
+    let clientErrorMessage = 'An unexpected error occurred while sending the email.';
+    if (error.message.startsWith("Resend API failed")) {
+        clientErrorMessage = error.message;
+    }
 
-    return new Response(JSON.stringify({
-        success: false,
-        error: "Failed to process email request via SMTP.",
-        details: detail
-    }), {
+    return new Response(JSON.stringify({ success: false, error: clientErrorMessage, details: error.message }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
     });
   }
