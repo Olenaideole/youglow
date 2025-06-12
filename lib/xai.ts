@@ -45,6 +45,9 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<ReportSt
     throw new Error('xAI API key is not configured. Please set XAI_API_KEY environment variable.');
   }
 
+  // Log the incoming answers object for debugging
+  // console.log('[DEBUG xai.ts] Received answers object:', JSON.stringify(answers, null, 2));
+
   const newPromptTemplate = `You are a skincare expert. Generate a personalized skin improvement report based on the following user information:
 
 **User Profile:**
@@ -57,14 +60,25 @@ export async function generateSkinReport(answers: QuizAnswers): Promise<ReportSt
 - Allergies: {allergies}
 - Daily Water Intake: {water_intake}
 - Current Diet: {current_diets}
+- Past Diets: {past_diets}
+- Favorite Foods: {favorite_foods}
+- Top 3 Favorite Dishes: {favorite_dishes}
+- Fast Food Consumption Frequency: {fast_food_frequency}
+- Foods Avoided Due to Skin Issues: {avoided_foods}
 - Stress Levels: {stress_levels}
 - Sleep Patterns: {sleep_patterns}
+- Pillowcase Changing Frequency: {pillowcase_frequency}
+- Alcohol Consumption Frequency: {alcohol_frequency}
 - Climate: {climate}
 - Skincare Products Used: {skincare_products_used}
+- Must-Have Skincare Products: {essential_products}
+- Skin Supplements Taken: {supplements}
+- Frequency of Make-Up Usage: {makeup_frequency}
 - Sun Exposure: {sun_exposure}
 - Exercise Habits: {exercise_habits}
 - Hormonal Changes: {hormonal_changes}
 - Previous Skin Conditions: {previous_skin_conditions}
+- Dermatologist-Confirmed Diagnoses: {diagnosed_conditions}
 - Family Skin History: {family_skin_history}
 - Preferred Product Texture: {preferred_product_texture}
 - Budget for Skincare: {budget_for_skincare}
@@ -92,11 +106,13 @@ The report must be structured as a JSON object with the following keys: "title",
   let prompt = newPromptTemplate;
   const placeholders = [
     "gender", "age", "skin_type", "skin_goal", "concerns", "medications",
-    "allergies", "water_intake", "current_diets", "stress_levels",
+    "allergies", "water_intake", "current_diets", "past_diets", "favorite_foods",
+    "fast_food_frequency", "avoided_foods", "favorite_dishes", "stress_levels",
     "sleep_patterns", "climate", "skincare_products_used", "sun_exposure",
     "exercise_habits", "hormonal_changes", "previous_skin_conditions",
     "family_skin_history", "preferred_product_texture", "budget_for_skincare",
-    "time_for_skincare_routine"
+    "time_for_skincare_routine", "makeup_frequency", "supplements",
+    "essential_products", "diagnosed_conditions", "pillowcase_frequency", "alcohol_frequency"
   ];
 
   for (const placeholder of placeholders) {
@@ -111,7 +127,8 @@ The report must be structured as a JSON object with the following keys: "title",
     prompt = prompt.replace(new RegExp(`{${placeholder}}`, 'g'), String(value));
   }
 
-  console.log("Constructed xAI Prompt (first 200 chars):", prompt.substring(0, 200) + "...");
+  console.log("Constructed xAI Prompt (first 200 chars):", prompt.substring(0, 200) + "..."); // Existing log
+  // console.log('[DEBUG xai.ts] Full prompt for xAI:', prompt); // Detailed debug log
 
   // Simulation logic (can be kept as is, or updated to return ReportStructure)
   if (process.env.NODE_ENV !== 'production' && XAI_API_KEY === 'mock-key-for-simulation-only') {
