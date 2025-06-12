@@ -1,82 +1,85 @@
-import { supabase } from './supabase'; // Assuming supabase client is exported from here
+// import { supabase } from './supabase'; // No longer needed if only using fetch
 
+// Keep ReportData interface as reportData.content is used.
 interface ReportData {
   title: string;
   content: string;
-  recommendations: string;
+  recommendations: string; // This could be optional or empty
 }
 
-/**
- * Sends the personalized skin report to the user via email using a Supabase Edge Function.
- *
- * @param userEmail The email address of the user.
- * @param reportData The personalized skin report data.
- * @returns A promise that resolves when the email is successfully sent.
- * @throws An error if invoking the Supabase Edge Function fails.
- */
-export async function sendPersonalizedReportEmail(userEmail: string, reportData: ReportData): Promise<void> {
-  // The name of your Supabase Edge Function
-  const edgeFunctionName = 'bright-api'; // MODIFIED HERE
+export async function sendPersonalizedReportEmail(userEmail: string, reportData: ReportData): Promise<any> { // Return type changed to Promise<any>
+  // Use the specific Supabase Function URL provided by the user earlier
+  const supabaseFunctionUrl = 'https://fkdnwzxainirielrpfzm.supabase.co/functions/v1/bright-api';
 
-  console.log(`Attempting to send report to ${userEmail} via Supabase Edge Function '${edgeFunctionName}'...`);
-
-  // Simulate invoking the edge function for now, especially if the function isn't deployed yet
-  // or to avoid actual email sending during development/testing.
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Simulating Supabase Edge Function invocation for email sending...');
-    console.log('Email recipient:', userEmail);
-    console.log('Report data:', reportData);
-
-    // Simulate a successful invocation
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // You could also simulate an error here randomly or based on a condition
-        // For example: if (userEmail.includes('error')) reject(new Error('Simulated email sending failure'));
-        console.log(`Simulated email sent successfully to ${userEmail}.`);
-        resolve();
-      }, 500);
-    });
+  // Construct combined HTML content
+  let reportHtmlContent = `<h1>${reportData.title}</h1><div>${reportData.content}</div>`;
+  if (reportData.recommendations && reportData.recommendations.trim() !== "") { // Check if recommendations exist and are not just whitespace
+    reportHtmlContent += `<h2>Recommendations:</h2><div>${reportData.recommendations}</div>`;
   }
 
-  // Actual Supabase Edge Function invocation
-  try {
-    const { data, error } = await supabase.functions.invoke(edgeFunctionName, {
-      body: {
-        email: userEmail,
-        report: reportData,
-      },
-    });
+  console.log(`Attempting to send report to ${userEmail} via Edge Function (direct fetch): ${supabaseFunctionUrl}`);
+  console.log(`Payload: email=${userEmail}, action=send-email, report HTML (length)=${reportHtmlContent.length}`);
 
-    if (error) {
-      console.error(`Error invoking Supabase Edge Function '${edgeFunctionName}':`, error);
-      throw new Error(`Failed to send report email: ${error.message}`);
+
+  // Simulation logic can be removed if focusing on actual call.
+  // if (process.env.NODE_ENV !== 'production') {
+  //   console.log('Simulating direct fetch to Edge Function for email sending...');
+  //   return Promise.resolve({ success: true, message: "Email simulated (direct fetch)" });
+  // }
+
+  const response = await fetch(supabaseFunctionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Supabase Edge Functions invoked via fetch might need an Authorization header
+      // with the Supabase anon key or a service_role key if not publicly callable
+      // or if you need to identify the caller. User's snippet did not include this.
+      // For now, omitting it as per user's snippet. If auth errors occur, this is a place to check.
+      // 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`, // Example
+    },
+    body: JSON.stringify({
+      email: userEmail,
+      report: reportHtmlContent, // This now sends the combined HTML
+      action: "send-email"
+    })
+  });
+
+  if (!response.ok) {
+    let errorDetails;
+    try {
+      errorDetails = await response.json(); // Try to parse error response as JSON
+    } catch (e) {
+      // If response is not JSON, response.text() might have already been consumed or will be.
+      // Let's try to get text if json parsing failed.
+      try {
+        errorDetails = { message: await response.text() }; // Fallback to text
+      } catch (textError) {
+        // If reading text also fails, use a generic message with status
+        errorDetails = { message: `HTTP error ${response.status} and error response could not be read.` };
+      }
     }
-
-    console.log(`Supabase Edge Function '${edgeFunctionName}' invoked successfully. Response data:`, data);
-    // Depending on your Edge Function's response, you might want to check `data` for success confirmation.
-    // For example, if your function returns { success: true } or similar.
-
-  } catch (error) {
-    console.error('Error during Supabase Edge Function invocation or processing:', error);
-    // Ensure the error is re-thrown or handled appropriately
-    if (error instanceof Error) {
-        throw error;
-    }
-    throw new Error('An unexpected error occurred while trying to send the report email.');
+    console.error(`Failed to send email via Edge Function. Status: ${response.status}`, errorDetails);
+    const errorMessage = errorDetails?.error || errorDetails?.message || `HTTP error ${response.status}`;
+    throw new Error(`Failed to send email via Edge Function: ${errorMessage}`);
   }
+
+  // Assuming the Edge Function returns a JSON response on success
+  return response.json();
 }
 
 /**
  * Placeholder for the Supabase Edge Function code.
- * This would typically reside in `supabase/functions/send-report-email/index.ts`
+ * This would typically reside in `supabase/functions/bright-api/index.ts` (or send-report-email)
  *
  * import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
- * import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+ * // import { Resend } from 'https://esm.sh/resend@latest'; // Example for Resend
  *
- * // Note: Use environment variables for Supabase URL, service role key, and any email provider API keys.
- * // Example: const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+ * console.log("[Edge Function 'bright-api'] booting up.");
  *
- * serve(async (req) => {
+ * // const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+ * // const FROM_EMAIL = Deno.env.get('FROM_EMAIL_RESEND_VERIFIED_SENDER');
+ *
+ * serve(async (req: Request) => {
  *   if (req.method === 'OPTIONS') {
  *     return new Response('ok', { headers: {
  *       'Access-Control-Allow-Origin': '*',
@@ -85,39 +88,52 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
  *   }
  *
  *   try {
- *     const { email, report } = await req.json();
+ *     const body = await req.json();
+ *     const { email, report, action } = body;
  *
- *     // TODO: Implement actual email sending logic here using your chosen email provider
- *     // e.g., Supabase built-in email (if suitable for HTML reports), or a third-party provider like Resend, SendGrid, etc.
- *     // For Supabase's built-in (Auth) emails, you'd typically use it for user auth related emails.
- *     // For transactional emails like this report, a dedicated email provider is often better.
+ *     if (action !== 'send-email') {
+ *       return new Response(JSON.stringify({ error: 'Invalid action.'  }), {
+ *         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
+ *       });
+ *     }
  *
- *     // Example using a hypothetical email sending service:
- *     // const emailResponse = await fetch('https://api.emailprovider.com/send', {
- *     //   method: 'POST',
- *     //   headers: { 'Authorization': `Bearer ${EMAIL_PROVIDER_API_KEY}`, 'Content-Type': 'application/json' },
- *     //   body: JSON.stringify({
- *     //     to: email,
- *     //     from: 'reports@youglow.com',
- *     //     subject: report.title || 'Your Personalized Skin Report',
- *     //     html: `<h1>${report.title}</h1><p>${report.content}</p><p><b>Recommendations:</b> ${report.recommendations}</p>`,
- *     //   }),
+ *     if (!email || !report) {
+ *       return new Response(JSON.stringify({ error: 'Missing email or report content.' }), {
+ *         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
+ *       });
+ *     }
+ *
+ *     // Actual email sending logic using Resend (or other provider)
+ *     // if (!RESEND_API_KEY || !FROM_EMAIL) {
+ *     //   console.error("[Edge Function] Resend API Key or From Email not configured.");
+ *     //   return new Response(JSON.stringify({ error: 'Email service not configured.' }), {
+ *     //     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
+ *     //   });
+ *     // }
+ *     // const resend = new Resend(RESEND_API_KEY);
+ *     // const { data, error: resendError } = await resend.emails.send({
+ *     //   from: FROM_EMAIL,
+ *     //   to: [email],
+ *     //   subject: 'Your Personalized Report (via bright-api)', // Consider making subject dynamic
+ *     //   html: report, // 'report' is the HTML content string
  *     // });
- *     // if (!emailResponse.ok) throw new Error(`Email provider API error: ${await emailResponse.text()}`);
+ *     // if (resendError) {
+ *     //   console.error("[Edge Function] Resend error:", resendError);
+ *     //   return new Response(JSON.stringify({ error: 'Failed to send email.', details: resendError.message }), {
+ *     //     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
+ *     //   });
+ *     // }
  *
- *     console.log(`Email report task processed for: ${email}`);
- *     console.log(`Report title: ${report.title}`);
- *
- *     return new Response(JSON.stringify({ success: true, message: `Report email queued for ${email}` }), {
- *       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
- *       status: 200,
+ *     console.log(`[Edge Function 'bright-api'] Successfully processed send-email for: ${email}`);
+ *     return new Response(JSON.stringify({ success: true, message: `Email queued for ${email}. Email ID: SIMULATED_ID` }), { // Replace SIMULATED_ID with data.id from Resend
+ *       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 200,
  *     });
+ *
  *   } catch (error) {
- *     console.error('Error in send-report-email function:', error);
+ *     console.error('[Edge Function bright-api] Error:', error.message, error.stack);
  *     return new Response(JSON.stringify({ error: error.message }), {
- *       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
- *       status: 500,
+ *       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 500,
  *     });
  *   }
- * })
+ * });
  */

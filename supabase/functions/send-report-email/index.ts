@@ -44,28 +44,41 @@ serve(async (req: Request) => {
   }
 
   let recipientEmail: string | undefined;
-  let report: { title?: string; content?: string; recommendations?: string } | undefined;
+  let reportHtmlFromClient: string | undefined; // Renamed for clarity
+  let action: string | undefined;
 
   try {
     const body = await req.json();
     recipientEmail = body.email;
-    report = body.report;
+    reportHtmlFromClient = body.report; // Expect 'report' to be a string (HTML)
+    action = body.action;
 
+    // Validate parameters
     if (!recipientEmail || typeof recipientEmail !== 'string') {
       console.warn("[Edge Function] Bad request: 'email' is missing or invalid.", body);
       return new Response(JSON.stringify({ success: false, error: "Bad request: 'email' parameter is missing or invalid." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
       });
     }
-    if (!report || typeof report !== 'object' || !report.title || !report.content) {
-      console.warn("[Edge Function] Bad request: 'report' object is missing or malformed.", body);
-      return new Response(JSON.stringify({ success: false, error: "Bad request: 'report' parameter is missing or malformed." }), {
+    // MODIFIED: Validate 'report' as a string
+    if (!reportHtmlFromClient || typeof reportHtmlFromClient !== 'string') {
+      console.warn("[Edge Function] Bad request: 'report' (HTML string) is missing or not a string.", body);
+      return new Response(JSON.stringify({ success: false, error: "Bad request: 'report' parameter (HTML string) is missing or invalid." }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
+      });
+    }
+    if (action !== "send-email") {
+      console.warn("[Edge Function] Bad request: 'action' parameter is missing or not 'send-email'.", body);
+      return new Response(JSON.stringify({ success: false, error: "Bad request: 'action' parameter is missing or invalid (must be 'send-email')." }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 400,
       });
     }
 
-    console.log(`[Edge Function] Received request to send report titled "${report.title}" to: ${recipientEmail} via Resend.`);
+    const subject = "Your Personalized Skin Report"; // Generic subject
 
+    console.log(`[Edge Function] Received action '${action}' for email to: ${recipientEmail}. Report HTML length: ${reportHtmlFromClient.length}`);
+
+    // Check for Email Provider Configuration (Resend)
     if (!RESEND_API_KEY) {
       console.error("[Edge Function] CRITICAL: RESEND_API_KEY is not configured in environment variables.");
       return new Response(JSON.stringify({ success: false, error: "Email service (Resend) API key not configured on server." }), {
@@ -79,24 +92,20 @@ serve(async (req: Request) => {
       });
     }
 
-
     const resend = new Resend(RESEND_API_KEY);
-
-    const subject = report.title || 'Your Personalized Skin Report';
-    const htmlContent = `<h1>${report.title}</h1><div>${report.content}</div>${report.recommendations ? `<h2>Recommendations:</h2><div>${report.recommendations}</div>` : ''}`;
 
     console.log(`[Edge Function] Attempting to send email via Resend from: ${FROM_EMAIL} to: ${recipientEmail}`);
 
+    // MODIFIED: Use reportHtmlFromClient directly as html.
     const { data, error: resendError } = await resend.emails.send({
-      from: FROM_EMAIL, // User's example: 'Acme <onboarding@resend.dev>'
-      to: [recipientEmail], // Resend expects an array of strings
+      from: FROM_EMAIL,
+      to: [recipientEmail],
       subject: subject,
-      html: htmlContent,
+      html: reportHtmlFromClient, // Use the pre-formatted HTML string directly
     });
 
     if (resendError) {
       console.error("[Edge Function] Resend API error:", resendError);
-      // Consider logging resendError.message, resendError.name, resendError.statusCode if available
       throw new Error(`Resend API failed: ${resendError.message || 'Unknown error'}`);
     }
 
@@ -104,7 +113,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Report email for "${report.title}" sent to ${recipientEmail} via Resend.`,
+      message: `Report email sent to ${recipientEmail} via Resend.`,
       emailId: data?.id
     }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }, status: 200,
