@@ -128,7 +128,7 @@ The report must be structured as a JSON object with the following keys: "title",
   }
 
   console.log("Constructed xAI Prompt (first 200 chars):", prompt.substring(0, 200) + "..."); // Existing log
-  // console.log('[DEBUG xai.ts] Full prompt for xAI:', prompt); // Detailed debug log
+  console.log('[DEBUG xai.ts] Full prompt for xAI:', prompt); // Detailed debug log
 
   // Simulation logic (can be kept as is, or updated to return ReportStructure)
   if (process.env.NODE_ENV !== 'production' && XAI_API_KEY === 'mock-key-for-simulation-only') {
