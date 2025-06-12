@@ -27,20 +27,33 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
   let recommendationsHtml = '';
   const recommendationsValue = reportData.recommendations;
 
-  if (typeof recommendationsValue === 'string') {
-    if (recommendationsValue.trim() !== "") {
-      recommendationsHtml = `<h2>Recommendations:</h2><div>${recommendationsValue}</div>`;
-    }
-  } else if (Array.isArray(recommendationsValue)) {
-    if (recommendationsValue.length > 0) {
-      // Filter out potential non-string elements if necessary, though xAI should provide strings
-      const stringRecommendations = recommendationsValue.filter(r => typeof r === 'string' && r.trim() !== "").join('<br>');
-      if (stringRecommendations) {
-        recommendationsHtml = `<h2>Recommendations:</h2><div>${stringRecommendations}</div>`;
+  // Helper function to format keys
+  const formatKey = (key: string): string => {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+  };
+
+  if (recommendationsValue && typeof recommendationsValue === 'object' && !Array.isArray(recommendationsValue)) {
+    let contentAdded = false;
+    let tempHtml = '<h2>Recommendations:</h2>';
+
+    for (const [key, value] of Object.entries(recommendationsValue)) {
+      if (Array.isArray(value) && value.length > 0) {
+        const validItems = value.filter(item => typeof item === 'string' && item.trim() !== '');
+        if (validItems.length > 0) {
+          tempHtml += `<h3>${formatKey(key)}</h3><ul>`;
+          validItems.forEach(item => {
+            tempHtml += `<li>${item}</li>`;
+          });
+          tempHtml += `</ul>`;
+          contentAdded = true;
+        }
       }
     }
+    if (contentAdded) {
+      recommendationsHtml = tempHtml;
+    }
   }
-  // If recommendationsValue is null, undefined, or an empty array/string, recommendationsHtml remains ''
+  // If recommendationsValue is null, not an object, or an object with no valid content, recommendationsHtml remains ''
 
   // Construct combined HTML content
   const reportHtmlContent = `<h1>${reportData.title}</h1><div>${reportData.content}</div>${recommendationsHtml}`;
