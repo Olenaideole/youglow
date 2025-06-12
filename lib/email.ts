@@ -12,10 +12,10 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
   const supabaseFunctionUrl = 'https://fkdnwzxainirielrpfzm.supabase.co/functions/v1/bright-api';
 
   // Retrieve the Service Role Key from environment variables
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceRoleKey = process.env.SERVICE_ROLE;
 
   if (!supabaseServiceRoleKey) {
-    console.error('[lib/email.ts] CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not configured in the Next.js backend environment.');
+    console.error('[lib/email.ts] CRITICAL: SERVICE_ROLE is not configured in the Next.js backend environment.');
     throw new Error('Server configuration error: Missing Supabase service role key.');
     // This error will be caught by the calling API route and should return a 500.
   }
