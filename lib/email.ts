@@ -11,14 +11,35 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
   // Use the specific Supabase Function URL provided by the user earlier
   const supabaseFunctionUrl = 'https://fkdnwzxainirielrpfzm.supabase.co/functions/v1/bright-api';
 
-  // Construct combined HTML content
-  let reportHtmlContent = `<h1>${reportData.title}</h1><div>${reportData.content}</div>`;
-  if (reportData.recommendations && reportData.recommendations.trim() !== "") { // Check if recommendations exist and are not just whitespace
-    reportHtmlContent += `<h2>Recommendations:</h2><div>${reportData.recommendations}</div>`;
-  }
+  // Log the type and value of recommendations for debugging
+  console.log('[lib/email.ts] Type of reportData.recommendations:', typeof reportData.recommendations, 'Value:', JSON.stringify(reportData.recommendations, null, 2));
 
-  console.log(`Attempting to send report to ${userEmail} via Edge Function (direct fetch): ${supabaseFunctionUrl}`);
-  console.log(`Payload: email=${userEmail}, action=send-email, report HTML (length)=${reportHtmlContent.length}`);
+  // Safely process recommendations
+  let recommendationsHtml = '';
+  const recommendationsValue = reportData.recommendations; // recommendations is currently typed as string
+
+  if (typeof recommendationsValue === 'string') {
+    if (recommendationsValue.trim() !== "") {
+      recommendationsHtml = `<h2>Recommendations:</h2><div>${recommendationsValue}</div>`;
+    }
+  } else if (Array.isArray(recommendationsValue)) {
+    if (recommendationsValue.length > 0) {
+      // Filter out potential non-string elements if necessary, though xAI should provide strings
+      const stringRecommendations = recommendationsValue.filter(r => typeof r === 'string' && r.trim() !== "").join('<br>');
+      if (stringRecommendations) {
+        recommendationsHtml = `<h2>Recommendations:</h2><div>${stringRecommendations}</div>`;
+      }
+    }
+  }
+  // If recommendationsValue is null, undefined, or an empty array/string, recommendationsHtml remains ''
+
+  // Construct combined HTML content
+  const reportHtmlContent = `<h1>${reportData.title}</h1><div>${reportData.content}</div>${recommendationsHtml}`;
+
+  console.log(`[lib/email.ts] Attempting to send report to ${userEmail} via Edge Function (direct fetch): ${supabaseFunctionUrl}`);
+  // Shorten log for HTML content if it's too long
+  const reportExcerpt = reportHtmlContent.length > 300 ? reportHtmlContent.substring(0, 297) + "..." : reportHtmlContent;
+  console.log(`[lib/email.ts] Payload: email=${userEmail}, action=send-email, report HTML (excerpt/length)=${reportHtmlContent.length > 300 ? reportExcerpt + ` (length: ${reportHtmlContent.length})` : reportExcerpt}`);
 
 
   // Simulation logic can be removed if focusing on actual call.
@@ -58,7 +79,7 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
         errorDetails = { message: `HTTP error ${response.status} and error response could not be read.` };
       }
     }
-    console.error(`Failed to send email via Edge Function. Status: ${response.status}`, errorDetails);
+    console.error(`[lib/email.ts] Failed to send email via Edge Function. Status: ${response.status}`, errorDetails);
     const errorMessage = errorDetails?.error || errorDetails?.message || `HTTP error ${response.status}`;
     throw new Error(`Failed to send email via Edge Function: ${errorMessage}`);
   }
