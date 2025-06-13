@@ -32,10 +32,6 @@ import { toast } from "sonner"; // Adjust path if necessary, e.g. "@/components/
 
 // Interface and Component for URL State Handling
 interface QuizUrlStateHandlerProps {
-  showResults: boolean;
-  answers: Record<number, string | string[]>;
-  email: string;
-  currentQuestion: number;
   setShowResults: (value: boolean) => void;
   setAnswers: (value: Record<number, string | string[]>) => void;
   setEmail: (value: string) => void;
@@ -44,70 +40,97 @@ interface QuizUrlStateHandlerProps {
   setShowEmailCapture: (value: boolean) => void;
   setShowChallengeSetup: (value: boolean) => void;
   setIsInitializing: (value: boolean) => void;
+  setCurrentQuestion: (value: number) => void;
 }
 
 function QuizUrlStateHandler(props: QuizUrlStateHandlerProps) {
-  const {
-    showResults,
-    // answers, // Not directly used for decision making, but set
-    // email, // Not directly used for decision making, but set
-    // currentQuestion, // Used in the second effect within this component
-    setShowResults,
-    setAnswers,
-    setEmail,
-    setShowGame,
-    setGameCompleted,
-    setShowEmailCapture,
-    setShowChallengeSetup,
-    setIsInitializing,
-  } = props;
-
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const step = searchParams.get('step');
-    if (step === 'results') {
-      if (!showResults) {
-        if (typeof window !== 'undefined') {
-          try {
-            const savedAnswers = sessionStorage.getItem('quizAnswers');
-            if (savedAnswers) {
-              const parsedAnswers = JSON.parse(savedAnswers);
-              if (Object.keys(parsedAnswers).length > 0) {
-                setAnswers(parsedAnswers);
-              }
-            }
-            const savedEmail = sessionStorage.getItem('quizEmail');
-            if (savedEmail) {
-              setEmail(savedEmail);
-            }
-          } catch (e) {
-            console.error("Error restoring quiz data from sessionStorage:", e);
-          }
-        }
-      }
-      setShowGame(false);
-      setGameCompleted(true);
-      setShowEmailCapture(false);
-      setShowChallengeSetup(false);
-      setShowResults(true);
-    }
-    setIsInitializing(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, showResults, setAnswers, setEmail, setShowGame, setGameCompleted, setShowEmailCapture, setShowResults, setIsInitializing]);
-
-  useEffect(() => {
-    if (props.currentQuestion === 0 && !searchParams.get('step')) {
+    const loadStateFromSession = () => {
       if (typeof window !== 'undefined') {
         try {
-          sessionStorage.removeItem('quizAnswers');
-          sessionStorage.removeItem('quizEmail');
+          const savedAnswers = sessionStorage.getItem('quizAnswers');
+          if (savedAnswers) props.setAnswers(JSON.parse(savedAnswers));
+          const savedEmail = sessionStorage.getItem('quizEmail');
+          if (savedEmail) props.setEmail(savedEmail);
         } catch (e) {
-          console.error("Error clearing quiz data from sessionStorage:", e);
+          console.error("Error restoring quiz data from sessionStorage:", e);
         }
       }
+    };
+
+    props.setShowGame(false);
+    props.setShowEmailCapture(false);
+    props.setShowChallengeSetup(false);
+    props.setShowResults(false);
+    // props.setGameCompleted(false); // Handled per step explicitly
+
+    const step = searchParams.get('step');
+
+    switch (step) {
+      case 'results':
+        loadStateFromSession();
+        props.setGameCompleted(true);
+        props.setShowResults(true);
+        props.setCurrentQuestion(quizQuestions.length - 1);
+        break;
+      case 'challenge':
+        loadStateFromSession();
+        props.setGameCompleted(true);
+        props.setShowChallengeSetup(true);
+        props.setCurrentQuestion(quizQuestions.length - 1);
+        break;
+      case 'email':
+        loadStateFromSession();
+        props.setGameCompleted(true);
+        props.setShowEmailCapture(true);
+        props.setCurrentQuestion(quizQuestions.length - 1);
+        break;
+      case 'game':
+        loadStateFromSession();
+        props.setShowGame(true);
+        props.setGameCompleted(false);
+        props.setCurrentQuestion(Math.floor(quizQuestions.length / 2));
+        break;
+      default:
+        if (step && step.startsWith('question_')) {
+          loadStateFromSession();
+          const questionId = parseInt(step.split('_')[1], 10);
+          const questionIndex = quizQuestions.findIndex(q => q.id === questionId);
+          if (questionIndex !== -1) {
+            props.setCurrentQuestion(questionIndex);
+            if (questionIndex >= Math.floor(quizQuestions.length / 2)) {
+              props.setGameCompleted(true); // Assume game is completed if navigating to or past game's natural position
+            } else {
+              props.setGameCompleted(false);
+            }
+          } else { // Invalid question_ID, fallback to first question
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('quizAnswers');
+              sessionStorage.removeItem('quizEmail');
+            }
+            props.setAnswers({});
+            props.setEmail('');
+            props.setCurrentQuestion(0);
+            props.setGameCompleted(false);
+          }
+        } else { // No step or unknown step (e.g., initial visit to /quiz)
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('quizAnswers');
+            sessionStorage.removeItem('quizEmail');
+          }
+          props.setAnswers({});
+          props.setEmail('');
+          props.setCurrentQuestion(0);
+          props.setGameCompleted(false);
+        }
+        break;
     }
-  }, [props.currentQuestion, searchParams]);
+
+    props.setIsInitializing(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, props.setAnswers, props.setEmail, props.setCurrentQuestion, props.setGameCompleted, props.setShowChallengeSetup, props.setShowEmailCapture, props.setShowGame, props.setShowResults, props.setIsInitializing]);
 
   return null;
 }
@@ -168,6 +191,34 @@ export default function QuizPage() {
   // const [reportError, setReportError] = useState<string | null>(null);
 
   const router = useRouter();
+
+  useEffect(() => {
+    // Persist answers to sessionStorage whenever they change
+    if (typeof window !== 'undefined' && Object.keys(answers).length > 0) { // Check if answers is not empty
+      try {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+      } catch (e) {
+        console.error("Error saving quiz answers to sessionStorage:", e);
+      }
+    } else if (typeof window !== 'undefined' && Object.keys(answers).length === 0) {
+      // If answers becomes empty (e.g. reset), remove it from storage too
+      sessionStorage.removeItem('quizAnswers');
+    }
+  }, [answers]);
+
+  useEffect(() => {
+    // Persist email to sessionStorage whenever it changes
+    if (typeof window !== 'undefined' && email) { // Check if email is not empty
+      try {
+        sessionStorage.setItem('quizEmail', email);
+      } catch (e) {
+        console.error("Error saving quiz email to sessionStorage:", e);
+      }
+    } else if (typeof window !== 'undefined' && !email) {
+       // If email becomes empty, remove it from storage
+      sessionStorage.removeItem('quizEmail');
+    }
+  }, [email]);
 
   const totalSteps = quizQuestions.length + 4;
 
@@ -230,33 +281,66 @@ export default function QuizPage() {
     setTimeout(() => {
       setGameCompleted(true);
       setShowGame(false);
+      // currentQuestion should be at Math.floor(quizQuestions.length / 2)
+      // The question to show is quizQuestions[currentQuestion]
+      router.push(`/quiz?step=question_${quizQuestions[currentQuestion].id}`, { shallow: true });
     }, 2000);
   };
 
   const nextQuestion = () => {
     if (shouldShowGame && !gameCompleted) {
       setShowGame(true);
+      router.push("/quiz?step=game", { shallow: true });
       return;
     }
     if (currentQuestion < quizQuestions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
+      const nextQIndex = currentQuestion + 1;
+      setCurrentQuestion(nextQIndex); // Update state first
+      router.push(`/quiz?step=question_${quizQuestions[nextQIndex].id}`, { shallow: true });
     } else {
-      setShowEmailCapture(true);
+      setShowEmailCapture(true); // Update state first
+      router.push("/quiz?step=email", { shallow: true });
     }
   };
 
   const prevQuestion = () => {
-    if (showEmailCapture) {
-      setShowEmailCapture(false);
-      return;
-    }
-    if (showChallengeSetup) {
+    if (showChallengeSetup) { // Coming back from Challenge to Email
       setShowChallengeSetup(false);
       setShowEmailCapture(true);
+      router.push("/quiz?step=email", { shallow: true });
       return;
     }
+    if (showEmailCapture) { // Coming back from Email to last Question
+      setShowEmailCapture(false);
+      // currentQuestion should still be the last question index
+      router.push(`/quiz?step=question_${quizQuestions[currentQuestion].id}`, { shallow: true });
+      return;
+    }
+    // Handling navigation back from a question or from the game
+    if (showGame) { // If currently on the game screen, going back to question before game
+      setShowGame(false);
+      // currentQuestion should be the index of the question *before* the game
+      router.push(`/quiz?step=question_${quizQuestions[currentQuestion].id}`, { shallow: true });
+      return;
+    }
+
     if (currentQuestion > 0) {
-      setCurrentQuestion((prev) => prev - 1);
+      const prevQIndex = currentQuestion - 1;
+      // Check if prevQIndex is the one just before where the game should be shown
+      // The game is shown when currentQuestion is Math.floor(quizQuestions.length / 2).
+      // So, the question *before* the game is at index Math.floor(quizQuestions.length / 2) - 1.
+      const isPrevQuestionBeforeGame = prevQIndex === (Math.floor(quizQuestions.length / 2) - 1);
+
+      if (gameCompleted && isPrevQuestionBeforeGame) {
+        // If game was completed and we are navigating to the question right before the game,
+        // the "previous" step logically is the game itself.
+        setCurrentQuestion(prevQIndex); // setCurrentQuestion to the question *before* the game
+        setShowGame(true); // Set showGame to true to indicate the game step
+        router.push("/quiz?step=game", { shallow: true });
+      } else {
+        setCurrentQuestion(prevQIndex);
+        router.push(`/quiz?step=question_${quizQuestions[prevQIndex].id}`, { shallow: true });
+      }
     }
   };
 
@@ -292,7 +376,8 @@ export default function QuizPage() {
         });
 
         setShowEmailCapture(false);
-        setShowChallengeSetup(true);
+        // setShowChallengeSetup(true); // State update handled by URL state handler if needed
+        router.push("/quiz?step=challenge", { shallow: true });
         if (typeof window !== 'undefined') {
           try {
             sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
@@ -327,7 +412,7 @@ export default function QuizPage() {
         console.error("Error saving quiz data to sessionStorage:", e);
       }
     }
-    router.push('/quiz?step=results', undefined, { shallow: true });
+    router.push('/quiz?step=results', { shallow: true });
   };
 
   const skipChallenge = () => {
@@ -343,7 +428,7 @@ export default function QuizPage() {
         console.error("Error saving quiz data to sessionStorage:", e);
       }
     }
-    router.push('/quiz?step=results', undefined, { shallow: true });
+    router.push('/quiz?step=results', { shallow: true });
   };
 
   const formatTime = (seconds: number) => {
@@ -1103,10 +1188,6 @@ export default function QuizPage() {
   };
 
   const quizUrlStateHandlerProps = {
-    showResults,
-    answers,
-    email,
-    currentQuestion,
     setShowResults,
     setAnswers,
     setEmail,
@@ -1115,6 +1196,7 @@ export default function QuizPage() {
     setShowEmailCapture,
     setShowChallengeSetup,
     setIsInitializing,
+    setCurrentQuestion,
   };
 
   return (
