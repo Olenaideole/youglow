@@ -7,7 +7,7 @@ interface ReportData {
   recommendations: string | string[] | null | undefined; // Make recommendations more flexible
 }
 
-export async function sendPersonalizedReportEmail(userEmail: string, reportData: ReportData): Promise<any> { // Return type changed to Promise<any>
+export async function sendPersonalizedReportEmail(name: string, userEmail: string, reportData: ReportData): Promise<any> { // Return type changed to Promise<any>
   // Use the specific Supabase Function URL provided by the user earlier
   const supabaseFunctionUrl = 'https://fkdnwzxainirielrpfzm.supabase.co/functions/v1/bright-api';
 
@@ -20,6 +20,7 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
     // This error will be caught by the calling API route and should return a 500.
   }
 
+  console.log(`[lib/email.ts] Received name for personalization: ${name}`);
   // Log the type and value of recommendations for debugging
   console.log('[lib/email.ts] Type of reportData.recommendations:', typeof reportData.recommendations, 'Value (JSON):', JSON.stringify(reportData.recommendations, null, 2));
 
@@ -56,12 +57,13 @@ export async function sendPersonalizedReportEmail(userEmail: string, reportData:
   // If recommendationsValue is null, not an object, or an object with no valid content, recommendationsHtml remains ''
 
   // Construct combined HTML content
-  const reportHtmlContent = `<h1>${reportData.title}</h1><div>${reportData.content}</div>${recommendationsHtml}`;
+  const greeting = `<h1>Hi ${name},</h1>`;
+  const reportHtmlContent = `${greeting}<h1>${reportData.title}</h1><div>${reportData.content}</div>${recommendationsHtml}`;
 
-  console.log(`[lib/email.ts] Attempting to send report to ${userEmail} via Edge Function: ${supabaseFunctionUrl}`);
+  console.log(`[lib/email.ts] Attempting to send report to ${name} <${userEmail}> via Edge Function: ${supabaseFunctionUrl}`);
   // Shorten log for HTML content if it's too long
   const reportExcerpt = reportHtmlContent.length > 300 ? reportHtmlContent.substring(0, 297) + "..." : reportHtmlContent;
-  console.log(`[lib/email.ts] Payload: email=${userEmail}, action=send-email, report HTML (excerpt/length)=${reportHtmlContent.length > 300 ? reportExcerpt + ` (length: ${reportHtmlContent.length})` : reportExcerpt}`);
+  console.log(`[lib/email.ts] Payload for ${name} <${userEmail}>: action=send-email, report HTML (excerpt/length)=${reportHtmlContent.length > 300 ? reportExcerpt + ` (length: ${reportHtmlContent.length})` : reportExcerpt}`);
 
   const response = await fetch(supabaseFunctionUrl, {
     method: 'POST',
