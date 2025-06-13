@@ -5,14 +5,15 @@ import { sendPersonalizedReportEmail } from '@/lib/email'; // Assuming @ is conf
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { answers, email } = body; // Ensure 'answers' is the correct key from the frontend
+    const { answers, email, name } = body; // Ensure 'answers' is the correct key from the frontend
 
-    if (!answers || !email) {
-      return NextResponse.json({ error: 'Missing answers or email in request body' }, { status: 400 });
+    if (!answers || !email || !name) {
+      return NextResponse.json({ error: 'Missing answers, email, or name in request body' }, { status: 400 });
     }
 
     console.log('[API Route] Received quiz answers:', answers);
     console.log('[API Route] Received email:', email);
+    console.log('[API Route] Received name:', name);
 
     // 1. Generate the skin report using xAI
     let report;
@@ -30,11 +31,11 @@ export async function POST(request: Request) {
 
     // 2. Send the report to the user's email via Supabase Edge Function
     try {
-      console.log(`[API Route] Sending report to ${email}...`);
-      await sendPersonalizedReportEmail(email, report);
-      console.log(`[API Route] Report email process initiated for ${email}.`);
+      console.log(`[API Route] Sending report to ${name} at ${email}...`);
+      await sendPersonalizedReportEmail(name, email, report);
+      console.log(`[API Route] Report email process initiated for ${name} at ${email}.`);
     } catch (emailError: any) {
-      console.error(`[API Route] Error sending report email to ${email}:`, emailError);
+      console.error(`[API Route] Error sending report email to ${name} at ${email}:`, emailError);
       // Log the error, but might still return a partial success to the user
       // if the report was generated, or decide if this is a critical failure.
       // For now, let's assume if email fails, it's a significant issue for this flow.

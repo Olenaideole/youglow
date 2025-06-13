@@ -148,6 +148,7 @@ export default function QuizPage() {
   const [gameAnswer, setGameAnswer] = useState("");
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [email, setEmail] = useState("");
+  const [name, setName] = useState(""); // Added name state
   const [showChallengeSetup, setShowChallengeSetup] = useState(false);
   const [challengeData, setChallengeData] = useState({
     title: "",
@@ -260,7 +261,7 @@ export default function QuizPage() {
   };
 
   const handleEmailSubmit = async () => { // Make the function async
-    if (!email) return;
+    if (!name || !email) return; // Added name check
     // setReportError(null); // Clear previous errors
     setIsGeneratingReport(true);
 
@@ -273,6 +274,7 @@ export default function QuizPage() {
         body: JSON.stringify({
           answers: answers, // The existing 'answers' state
           email: email,     // The existing 'email' state
+          name: name,       // Added name
         }),
       });
 
@@ -494,6 +496,14 @@ export default function QuizPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <Input
+                      type="text"
+                      placeholder="Enter your name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="text-center text-lg p-4"
+                      required
+                    />
+                    <Input
                       type="email"
                       placeholder="Enter your email address"
                       value={email}
@@ -518,7 +528,7 @@ export default function QuizPage() {
                   </div>
                   <Button
                     onClick={handleEmailSubmit}
-                    disabled={!email || isGeneratingReport} // Disable if email is empty or report is generating
+                    disabled={!name || !email || isGeneratingReport} // Disable if name or email is empty or report is generating
                     className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-4 text-lg"
                   >
                     {isGeneratingReport ? 'Generating Your Report...' : 'Get My Personalized Report'}
