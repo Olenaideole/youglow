@@ -17,7 +17,7 @@ export function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-pink-200">
             <Star className="w-4 h-4 text-yellow-500 fill-current" />
-            <span className="text-sm font-medium text-gray-700">Trusted by 50,000+ users</span>
+            <span className="text-sm font-medium text-gray-700">Approved by leading dermatologists</span>
           </div>
 
           {/* Main Headline */}
