@@ -10,6 +10,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     // Check authentication status
@@ -21,12 +22,15 @@ export function Header() {
         if (error) {
           console.warn("Auth check error:", error.message)
           setIsAuthenticated(false)
+          setUserEmail(null)
         } else {
           setIsAuthenticated(!!data.user)
+          setUserEmail(data.user?.email || null)
         }
       } catch (error) {
         console.warn("Auth check failed:", error)
         setIsAuthenticated(false)
+        setUserEmail(null)
       } finally {
         setIsLoading(false)
       }
@@ -40,6 +44,7 @@ export function Header() {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event, session) => {
         setIsAuthenticated(!!session)
+        setUserEmail(session?.user?.email || null)
         setIsLoading(false)
       })
 
@@ -55,6 +60,18 @@ export function Header() {
       setIsLoading(false)
     }
   }, [])
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setIsAuthenticated(false)
+      setUserEmail(null)
+      // Redirect to home page after logout
+      window.location.href = "/"
+    } catch (error) {
+      console.error("Error logging out:", error)
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-pink-100">
@@ -91,22 +108,32 @@ export function Header() {
               </Button>
             </Link>
             {!isLoading && isAuthenticated && (
-              <Link href="/dashboard">
-                <Button variant="ghost" className="text-gray-600 hover:text-pink-600">
-                  My Glow Dashboard
+              <>
+                {userEmail && <span className="text-sm text-gray-600">{userEmail}</span>}
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-gray-600 hover:text-pink-600">
+                    My Glow Dashboard
+                  </Button>
+                </Link>
+                <Button variant="ghost" className="text-gray-600 hover:text-pink-600" onClick={handleLogout}>
+                  Log Out
                 </Button>
-              </Link>
+              </>
             )}
-            <Link href="/login">
-              <Button variant="ghost" className="text-gray-600 hover:text-pink-600">
-                Log In
-              </Button>
-            </Link>
-            <Link href="/#pricing">
-              <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full px-6">
-                Get Started
-              </Button>
-            </Link>
+            {!isLoading && !isAuthenticated && (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" className="text-gray-600 hover:text-pink-600">
+                    Log In
+                  </Button>
+                </Link>
+                <Link href="/#pricing">
+                  <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full px-6">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -135,22 +162,32 @@ export function Header() {
                   </Button>
                 </Link>
                 {!isLoading && isAuthenticated && (
-                  <Link href="/dashboard">
-                    <Button variant="ghost" className="w-full text-gray-600 hover:text-pink-600">
-                      My Glow Dashboard
+                  <>
+                    {userEmail && <span className="block text-sm text-gray-600 px-4 py-2">{userEmail}</span>}
+                    <Link href="/dashboard">
+                      <Button variant="ghost" className="w-full text-gray-600 hover:text-pink-600">
+                        My Glow Dashboard
+                      </Button>
+                    </Link>
+                    <Button variant="ghost" className="w-full text-gray-600 hover:text-pink-600" onClick={handleLogout}>
+                      Log Out
                     </Button>
-                  </Link>
+                  </>
                 )}
-                <Link href="/login">
-                  <Button variant="ghost" className="w-full text-gray-600 hover:text-pink-600">
-                    Log In
-                  </Button>
-                </Link>
-                <Link href="/#pricing">
-                  <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full">
-                    Get Started
-                  </Button>
-                </Link>
+                {!isLoading && !isAuthenticated && (
+                  <>
+                    <Link href="/login">
+                      <Button variant="ghost" className="w-full text-gray-600 hover:text-pink-600">
+                        Log In
+                      </Button>
+                    </Link>
+                    <Link href="/#pricing">
+                      <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-full">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>
