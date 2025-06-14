@@ -542,6 +542,11 @@ export default function QuizPage() {
               </Card>
             </div>
           </div>
+          <div className="text-center mt-8 text-xs text-gray-500">
+            <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
+          </div>
         </div>
       );
     }
@@ -630,6 +635,11 @@ export default function QuizPage() {
                 </Button>
               </div>
             </div>
+          </div>
+          <div className="text-center mt-8 text-xs text-gray-500">
+            <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
           </div>
         </div>
       );
@@ -771,6 +781,11 @@ export default function QuizPage() {
                 </Button>
               </div>
             </div>
+          </div>
+          <div className="text-center mt-8 text-xs text-gray-500">
+            <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
           </div>
         </div>
       );
@@ -1070,6 +1085,11 @@ export default function QuizPage() {
               </Card>
             </div>
           </div>
+          <div className="text-center mt-8 text-xs text-gray-500">
+            <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
+          </div>
         </div>
       );
     }
@@ -1181,6 +1201,11 @@ export default function QuizPage() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
+          </div>
+          <div className="text-center mt-8 text-xs text-gray-500">
+            <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
           </div>
         </div>
       </div>
