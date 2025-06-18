@@ -138,6 +138,19 @@ export const createAppRouteClient = (cookieStore: any) => { // Changed signature
     return createMockSupabaseClient()
   }
 
+  // Detailed logging for cookieStore
+  console.log("Inspecting cookieStore in createAppRouteClient:");
+  console.log("typeof cookieStore:", typeof cookieStore);
+  console.log("cookieStore object:", cookieStore); // May be stringified
+  console.log("typeof cookieStore.get:", typeof cookieStore?.get);
+  console.log("typeof cookieStore.set:", typeof cookieStore?.set);
+  console.log("typeof cookieStore.remove:", typeof cookieStore?.remove);
+  try {
+    console.log("Attempting to call cookieStore.get('sb-test-cookie'):", cookieStore?.get('sb-test-cookie'));
+  } catch (e: any) {
+    console.error("Error calling cookieStore.get:", e.message);
+  }
+
   try {
     const { createRouteHandlerClient } = require("@supabase/ssr")
 
