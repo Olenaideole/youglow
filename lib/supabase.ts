@@ -154,17 +154,31 @@ export const createAppRouteClient = (cookieStore: any) => { // Changed signature
   // Define the sanitized cookie store for Supabase
   const cookieStoreForSupabase = {
     get(name: string) {
-      const cookie = cookieStore?.get(name);
-      console.log(`Cookie_get: ${name}`, cookie);
-      return cookie;
+      try {
+        const cookie = cookieStore?.get(name);
+        // Log the name and the value property of the cookie if it exists
+        console.log(`Cookie_get: ${name}, Value: `, cookie?.value);
+        return cookie;
+      } catch (e: any) {
+        console.error(`ERROR INSIDE cookieStoreForSupabase.get for ${name}:`, e.message);
+        return undefined; // Return undefined or re-throw as appropriate
+      }
     },
     set(name: string, value: string, options: any) {
-      console.log(`Cookie_set: ${name}`);
-      // No-op for now
+      try {
+        console.log(`Cookie_set: ${name}`);
+        // No-op for now
+      } catch (e: any) {
+        console.error(`ERROR INSIDE cookieStoreForSupabase.set for ${name}:`, e.message);
+      }
     },
     remove(name: string, options: any) {
-      console.log(`Cookie_remove: ${name}`);
-      // No-op for now
+      try {
+        console.log(`Cookie_remove: ${name}`);
+        // No-op for now
+      } catch (e: any) {
+        console.error(`ERROR INSIDE cookieStoreForSupabase.remove for ${name}:`, e.message);
+      }
     },
   };
 
