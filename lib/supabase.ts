@@ -101,8 +101,8 @@ if (isV0Preview) {
 
 export const supabase = supabaseClient
 
-// Server-side client
-export const createServerClient = () => {
+// Admin client (uses service_role_key)
+export const createAdminClient = () => {
   if (isV0Preview) {
     return createMockSupabaseClient()
   }
@@ -114,11 +114,11 @@ export const createServerClient = () => {
     const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!serverUrl || !serverKey) {
-      console.warn("lib/supabase: Server-side Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", serverUrl, "SUPABASE_SERVICE_ROLE_KEY:", serverKey, "Falling back to mock client.");
+      console.warn("lib/supabase: Admin Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", serverUrl, "SUPABASE_SERVICE_ROLE_KEY:", serverKey, "Falling back to mock client.");
       return createMockSupabaseClient()
     }
 
-    console.log("lib/supabase: Initializing real server-side Supabase client. URL:", serverUrl, "Service Key (first 5 chars):", serverKey?.substring(0,5));
+    console.log("lib/supabase: Initializing real admin Supabase client. URL:", serverUrl, "Service Key (first 5 chars):", serverKey?.substring(0,5));
     return createClient(serverUrl, serverKey, {
       auth: {
         persistSession: false,
@@ -127,7 +127,35 @@ export const createServerClient = () => {
       },
     })
   } catch (error) {
-    console.warn("Failed to create server Supabase client, using mock:", error)
+    console.warn("Failed to create admin Supabase client, using mock:", error)
+    return createMockSupabaseClient()
+  }
+}
+
+// App Route Handler client (uses anon key, reads cookies)
+export const createAppRouteClient = (cookies: () => any) => {
+  if (isV0Preview) {
+    return createMockSupabaseClient()
+  }
+
+  try {
+    const { createRouteHandlerClient } = require("@supabase/ssr")
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn("lib/supabase: App Route Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", supabaseUrl, "NEXT_PUBLIC_SUPABASE_ANON_KEY:", supabaseAnonKey, "Falling back to mock client.");
+      return createMockSupabaseClient()
+    }
+
+    console.log("lib/supabase: Initializing real App Route Supabase client. URL:", supabaseUrl, "Anon Key (first 5 chars):", supabaseAnonKey?.substring(0,5));
+    return createRouteHandlerClient({ cookies }, {
+      supabaseUrl,
+      supabaseKey: supabaseAnonKey,
+    })
+  } catch (error) {
+    console.warn("Failed to create App Route Supabase client, using mock:", error)
     return createMockSupabaseClient()
   }
 }
