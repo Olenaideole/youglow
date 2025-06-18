@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createRouteHandlerClient } from '@supabase/ssr'; // Added
+import * as supabaseSSR from '@supabase/ssr'; // Changed import
 // Removed: import { createAppRouteClient } from "@/lib/supabase";
 // Removed: import { STRIPE_PLANS } from "@/lib/stripe";
 
@@ -32,10 +32,15 @@ export async function GET() {
   console.log("Direct init: typeof patchedCookieStore.set:", typeof patchedCookieStore.set);
   console.log("Direct init: typeof patchedCookieStore.remove:", typeof patchedCookieStore.remove);
 
+  // Log supabaseSSR module content
+  console.log("Logging supabaseSSR module content H_E_R_E ---");
+  console.log("supabaseSSR module:", supabaseSSR);
+  console.log("typeof supabaseSSR.createRouteHandlerClient:", typeof supabaseSSR?.createRouteHandlerClient);
+
   let supabase: any; // Use 'any' for flexibility with mock assignment
 
   try {
-    supabase = createRouteHandlerClient(patchedCookieStore, {
+    supabase = supabaseSSR.createRouteHandlerClient(patchedCookieStore, { // Changed call
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
       supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     });
