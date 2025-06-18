@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe.server"
 import { headers } from "next/headers"
-import { createServerClient } from "@/lib/supabase"
+import { createAdminClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        const supabase = createServerClient()
+        const supabase = createAdminClient()
         let userId: string | undefined
 
         // 1. User Provisioning
