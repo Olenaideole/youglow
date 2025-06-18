@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" // Assuming you have a Card component
+import ExpirationTimer from "@/components/dashboard/expiration-timer" // Import the new timer
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { SkinReports } from "@/components/dashboard/skin-reports"
 import { GlowChallenges } from "@/components/dashboard/glow-challenges"
@@ -16,6 +18,12 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const router = useRouter()
+
+  // Subscription state
+  const [planName, setPlanName] = useState<string | null>(null)
+  const [expirationDate, setExpirationDate] = useState<string | null>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState<boolean>(true)
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
 
   useEffect(() => {
     // Check if user is authenticated
@@ -41,6 +49,38 @@ export default function DashboardPage() {
 
     checkAuth()
   }, [router])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchSubscription = async () => {
+        setSubscriptionLoading(true)
+        setSubscriptionError(null)
+        try {
+          const response = await fetch("/api/get-user-subscription")
+          if (response.ok) {
+            const data = await response.json()
+            setPlanName(data.planName)
+            setExpirationDate(data.expirationDate)
+          } else if (response.status === 404) {
+            // No subscription found, not necessarily an "error" to display
+            setPlanName(null)
+            setExpirationDate(null)
+            console.log("No active subscription found for the user.")
+          } else {
+            const errorData = await response.json()
+            setSubscriptionError(errorData.error || `Error: ${response.status}`)
+            console.error("Failed to fetch subscription:", errorData.error || response.status)
+          }
+        } catch (error) {
+          console.error("Error fetching subscription:", error)
+          setSubscriptionError("Failed to fetch subscription details.")
+        } finally {
+          setSubscriptionLoading(false)
+        }
+      }
+      fetchSubscription()
+    }
+  }, [isAuthenticated])
 
   // Show loading state
   if (isLoading) {
@@ -68,6 +108,7 @@ export default function DashboardPage() {
         <div className="flex flex-wrap gap-2 mb-8 bg-white rounded-full p-2 shadow-sm">
           {[
             { id: "overview", label: "Overview" },
+            // { id: "subscription", label: "My Subscription" }, // Optional: if you want a dedicated tab
             { id: "reports", label: "Skin Reports" },
             { id: "challenges", label: "Challenges" },
             { id: "tips", label: "Daily Tips" },
@@ -91,9 +132,30 @@ export default function DashboardPage() {
 
         {/* Content */}
         <div className="space-y-8">
+          {/* Subscription Info Card - Placed prominently, perhaps above tabs or within overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>My Subscription</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subscriptionLoading && <p>Loading subscription details...</p>}
+              {subscriptionError && <p className="text-red-500">Error: {subscriptionError}</p>}
+              {!subscriptionLoading && !subscriptionError && planName && expirationDate && (
+                <div>
+                  <p><strong>Plan:</strong> {planName}</p>
+                  <ExpirationTimer expirationDate={expirationDate} />
+                </div>
+              )}
+              {!subscriptionLoading && !subscriptionError && !planName && (
+                <p>No active subscription found. Visit our plans page to subscribe!</p>
+              )}
+            </CardContent>
+          </Card>
+
           {activeTab === "overview" && (
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
+                {/* Subscription info could also be a smaller card here if preferred */}
                 <SkinReports />
                 <GlowChallenges />
               </div>

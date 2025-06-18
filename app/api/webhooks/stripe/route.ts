@@ -1,30 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe.server"
 import { headers } from "next/headers"
-
-// Mock function to generate random password
-function generatePassword(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-  let password = ""
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
-}
-
-// Mock function to send email
-async function sendCredentialsEmail(email: string, password: string, name: string, planId: string) {
-  // In a real implementation, you would use a service like SendGrid, Mailgun, or AWS SES
-  console.log(`Sending credentials email to ${email}`)
-  console.log(`Name: ${name}`)
-  console.log(`Password: ${password}`)
-  console.log(`Plan: ${planId}`)
-
-  // Simulate email sending delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  return { success: true }
-}
+import { createServerClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -50,32 +27,77 @@ export async function POST(request: NextRequest) {
       const paymentIntent = event.data.object
       const { email, name, planId } = paymentIntent.metadata
 
+      if (!email || !name || !planId) {
+        console.error("Missing metadata from payment intent:", paymentIntent.id)
+        return NextResponse.json({ error: "Missing metadata" }, { status: 400 })
+      }
+
       try {
-        // Generate random password
-        const password = generatePassword()
+        const supabase = createServerClient()
+        let userId: string | undefined
 
-        // In a real implementation, you would:
-        // 1. Create user in database with hashed password
-        // 2. Create subscription record
-        // 3. Send welcome email with credentials
+        // 1. User Provisioning
+        const { data: existingUserData, error: existingUserError } = await supabase.auth.admin.getUserByEmail(email)
 
-        // Mock user creation
-        const user = {
-          id: `user_${Date.now()}`,
-          email,
-          name,
-          password, // In real app, this would be hashed
-          planId,
-          createdAt: new Date().toISOString(),
-          stripePaymentIntentId: paymentIntent.id,
+        if (existingUserError && !existingUserData?.user) {
+          // User does not exist, create them
+          console.log(`User with email ${email} not found. Creating new user.`);
+          const { data: newUserDate, error: newUserError } = await supabase.auth.admin.createUser({
+            email: email,
+            user_metadata: { name: name },
+            email_confirm: true, // Optional: require email confirmation
+          })
+
+          if (newUserError) {
+            console.error("Error creating new user:", newUserError)
+            return NextResponse.json({ error: "Error creating user" }, { status: 500 })
+          }
+
+          if (newUserDate.user) {
+            userId = newUserDate.user.id
+            console.log("New user created successfully:", userId)
+          } else {
+            console.error("Failed to create user, no user data returned.")
+            return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
+          }
+
+        } else if (existingUserData?.user) {
+          // User exists
+          userId = existingUserData.user.id
+          console.log(`Existing user found: ${userId}`)
+        } else {
+            console.error("Error checking for existing user:", existingUserError)
+            return NextResponse.json({ error: "Error checking user existence" }, { status: 500 })
         }
 
-        // Send credentials email
-        await sendCredentialsEmail(email, password, name, planId)
 
-        console.log("User account created successfully:", user.id)
+        // 2. Subscription Record
+        if (userId) {
+          const purchaseDate = new Date(paymentIntent.created * 1000).toISOString()
+          const { data: subscriptionData, error: subscriptionError } = await supabase
+            .from("user_subscriptions")
+            .insert([
+              {
+                user_id: userId,
+                plan_id: planId,
+                stripe_payment_intent_id: paymentIntent.id,
+                purchase_date: purchaseDate,
+              },
+            ])
+
+          if (subscriptionError) {
+            console.error("Error creating subscription record:", subscriptionError)
+            return NextResponse.json({ error: "Error creating subscription" }, { status: 500 })
+          }
+          console.log("Subscription record created successfully:", subscriptionData)
+        } else {
+          console.error("User ID not available, cannot create subscription record.")
+          // Potentially return an error response if userId is crucial here
+        }
+
       } catch (error) {
-        console.error("Error processing payment success:", error)
+        console.error("Error processing payment_intent.succeeded:", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
       }
       break
 
