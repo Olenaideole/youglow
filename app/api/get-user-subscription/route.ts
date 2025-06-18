@@ -1,9 +1,12 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase";
+import { cookies } from "next/headers";
+import { createAppRouteClient } from "@/lib/supabase";
 import { STRIPE_PLANS } from "@/lib/stripe";
 
 export async function GET() {
-  const supabase = createServerClient();
+  const supabase = createAppRouteClient(cookies);
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 

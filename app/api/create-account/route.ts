@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"; // Import createServerClient
+import { createAdminClient } from "@/lib/supabase"; // Import createAdminClient
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient(); // Instantiate server client
+    const supabase = createAdminClient(); // Instantiate admin client
     const { email, password, name, planId } = await request.json() // Add password to destructuring
 
     if (!email || !password || !name || !planId) { // Add password validation
