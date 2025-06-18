@@ -133,52 +133,37 @@ export const createAdminClient = () => {
 }
 
 // App Route Handler client (uses anon key, reads cookies)
-export const createAppRouteClient = (cookieStore: any) => { // Changed signature
+export const createAppRouteClient = (originalCookieStore: any) => { // Renamed parameter
   if (isV0Preview) {
     return createMockSupabaseClient()
   }
 
-  // Detailed logging for cookieStore
-  console.log("Inspecting cookieStore in createAppRouteClient:");
-  console.log("typeof cookieStore:", typeof cookieStore);
-  console.log("cookieStore object:", cookieStore); // May be stringified
-  console.log("typeof cookieStore.get:", typeof cookieStore?.get);
-  console.log("typeof cookieStore.set:", typeof cookieStore?.set);
-  console.log("typeof cookieStore.remove:", typeof cookieStore?.remove);
+  // Detailed logging for originalCookieStore (can be kept for one more run)
+  console.log("Inspecting originalCookieStore in createAppRouteClient:");
+  console.log("typeof originalCookieStore:", typeof originalCookieStore);
+  console.log("originalCookieStore object:", originalCookieStore); // May be stringified
+  console.log("typeof originalCookieStore.get:", typeof originalCookieStore?.get);
+  console.log("typeof originalCookieStore.set:", typeof originalCookieStore?.set);
+  console.log("typeof originalCookieStore.remove:", typeof originalCookieStore?.remove);
   try {
-    console.log("Attempting to call cookieStore.get('sb-test-cookie'):", cookieStore?.get('sb-test-cookie'));
+    console.log("Attempting to call originalCookieStore.get('sb-test-cookie'):", originalCookieStore?.get('sb-test-cookie'));
   } catch (e: any) {
-    console.error("Error calling cookieStore.get:", e.message);
+    console.error("Error calling originalCookieStore.get:", e.message);
   }
 
-  // Define the sanitized cookie store for Supabase
-  const cookieStoreForSupabase = {
-    get(name: string) {
-      try {
-        const cookie = cookieStore?.get(name);
-        // Log the name and the value property of the cookie if it exists
-        console.log(`Cookie_get: ${name}, Value: `, cookie?.value);
-        return cookie;
-      } catch (e: any) {
-        console.error(`ERROR INSIDE cookieStoreForSupabase.get for ${name}:`, e.message);
-        return undefined; // Return undefined or re-throw as appropriate
-      }
+  const patchedCookieStore = {
+    get: (name: string) => {
+      // console.log(`PatchedCookieStore_get: ${name}`); // Optional log
+      return originalCookieStore.get(name);
     },
-    set(name: string, value: string, options: any) {
-      try {
-        console.log(`Cookie_set: ${name}`);
-        // No-op for now
-      } catch (e: any) {
-        console.error(`ERROR INSIDE cookieStoreForSupabase.set for ${name}:`, e.message);
-      }
+    set: (name: string, value: string, options: any) => {
+      // console.log(`PatchedCookieStore_set: ${name}`); // Optional log
+      return originalCookieStore.set(name, value, options);
     },
-    remove(name: string, options: any) {
-      try {
-        console.log(`Cookie_remove: ${name}`);
-        // No-op for now
-      } catch (e: any) {
-        console.error(`ERROR INSIDE cookieStoreForSupabase.remove for ${name}:`, e.message);
-      }
+    remove: (name: string, options: any) => {
+      console.log(`PatchedCookieStore_remove: ${name}`); // Keep this log
+      // Polyfill remove by setting an expired cookie on the original store
+      originalCookieStore.set(name, '', { ...options, expires: new Date(0) });
     },
   };
 
@@ -194,7 +179,7 @@ export const createAppRouteClient = (cookieStore: any) => { // Changed signature
     }
 
     console.log("lib/supabase: Initializing real App Route Supabase client. URL:", supabaseUrl, "Anon Key (first 5 chars):", supabaseAnonKey?.substring(0,5));
-    return createRouteHandlerClient(cookieStoreForSupabase, { // Use sanitized store
+    return createRouteHandlerClient(patchedCookieStore, { // Use patched store
       supabaseUrl,
       supabaseKey: supabaseAnonKey,
     })
