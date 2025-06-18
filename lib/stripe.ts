@@ -25,7 +25,7 @@ export { stripePromise }; // Export client-side stripe promise
 
 export const STRIPE_PLANS = {
   "1-week": {
-    priceId: "price_1RY9utHrpqSlBlhj6SdeRgKv", // Replace with actual Stripe price ID
+    priceId: "price_1RbHpzHF8iKj3yUNOdTxQY5q", // Replace with actual Stripe price ID
     amount: 693, // $6.93 in cents
     durationDays: 7,
   },
