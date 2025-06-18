@@ -152,19 +152,21 @@ export const createAppRouteClient = (originalCookieStore: any) => { // Renamed p
   }
 
   const patchedCookieStore = {
-    get: (name: string) => {
-      // console.log(`PatchedCookieStore_get: ${name}`); // Optional log
+    get: function(name: string) {
+      console.log(`PatchedCookieStore_get call for: ${name}`);
+      // Assuming originalCookieStore.get is a function. We logged its type earlier.
       return originalCookieStore.get(name);
     },
-    set: (name: string, value: string, options: any) => {
-      // console.log(`PatchedCookieStore_set: ${name}`); // Optional log
+    set: function(name: string, value: string, options: any) {
+      console.log(`PatchedCookieStore_set call for: ${name}`);
+      // Assuming originalCookieStore.set is a function. We logged its type earlier.
       return originalCookieStore.set(name, value, options);
     },
-    remove: (name: string, options: any) => {
-      console.log(`PatchedCookieStore_remove: ${name}`); // Keep this log
+    remove: function(name: string, options: any) {
+      console.log(`PatchedCookieStore_remove call for: ${name}`);
       // Polyfill remove by setting an expired cookie on the original store
       originalCookieStore.set(name, '', { ...options, expires: new Date(0) });
-    },
+    }
   };
 
   try {
