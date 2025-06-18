@@ -133,7 +133,7 @@ export const createAdminClient = () => {
 }
 
 // App Route Handler client (uses anon key, reads cookies)
-export const createAppRouteClient = (cookies: () => any) => {
+export const createAppRouteClient = (cookieStore: any) => { // Changed signature
   if (isV0Preview) {
     return createMockSupabaseClient()
   }
@@ -150,7 +150,7 @@ export const createAppRouteClient = (cookies: () => any) => {
     }
 
     console.log("lib/supabase: Initializing real App Route Supabase client. URL:", supabaseUrl, "Anon Key (first 5 chars):", supabaseAnonKey?.substring(0,5));
-    return createRouteHandlerClient({ cookies }, {
+    return createRouteHandlerClient(cookieStore, { // Changed call
       supabaseUrl,
       supabaseKey: supabaseAnonKey,
     })
