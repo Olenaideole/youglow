@@ -151,6 +151,23 @@ export const createAppRouteClient = (cookieStore: any) => { // Changed signature
     console.error("Error calling cookieStore.get:", e.message);
   }
 
+  // Define the sanitized cookie store for Supabase
+  const cookieStoreForSupabase = {
+    get(name: string) {
+      const cookie = cookieStore?.get(name);
+      console.log(`Cookie_get: ${name}`, cookie);
+      return cookie;
+    },
+    set(name: string, value: string, options: any) {
+      console.log(`Cookie_set: ${name}`);
+      // No-op for now
+    },
+    remove(name: string, options: any) {
+      console.log(`Cookie_remove: ${name}`);
+      // No-op for now
+    },
+  };
+
   try {
     const { createRouteHandlerClient } = require("@supabase/ssr")
 
@@ -163,7 +180,7 @@ export const createAppRouteClient = (cookieStore: any) => { // Changed signature
     }
 
     console.log("lib/supabase: Initializing real App Route Supabase client. URL:", supabaseUrl, "Anon Key (first 5 chars):", supabaseAnonKey?.substring(0,5));
-    return createRouteHandlerClient(cookieStore, { // Changed call
+    return createRouteHandlerClient(cookieStoreForSupabase, { // Use sanitized store
       supabaseUrl,
       supabaseKey: supabaseAnonKey,
     })
