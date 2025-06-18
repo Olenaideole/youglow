@@ -30,7 +30,7 @@ export const STRIPE_PLANS = {
     durationDays: 7,
   },
   "4-weeks": {
-    priceId: "price_1RY9wLHrpqSlBlhjm6lUE7mh", // Replace with actual Stripe price ID
+    priceId: "price_1RbLMnHF8iKj3yUNU1U5ZW2U", // Replace with actual Stripe price ID
     amount: 1519, // $15.19 in cents
     durationDays: 28,
   },
