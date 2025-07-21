@@ -132,7 +132,6 @@ export async function POST(request: NextRequest) {
       const csPlanId = checkoutSession.metadata?.planId;
       // Ensure payment_intent is a string before using it. It can also be an object.
       const csPaymentIntentId = typeof checkoutSession.payment_intent === 'string' ? checkoutSession.payment_intent : null;
-      const csCreatedTimestamp = checkoutSession.created; // This is the session creation time.
 
       if (!csEmail || !csPlanId || !csPaymentIntentId) {
         console.error("Missing required data from checkout.session.completed:", {
@@ -144,10 +143,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Missing required data from checkout session (email, planId, or paymentIntentId)" }, { status: 400 });
       }
 
-      // Note: checkoutSession.created is the timestamp of the checkout session creation,
-      // not necessarily the payment confirmation. If payment_intent.succeeded is also handled,
-      // ensure this doesn't cause duplicate processing or use the payment_intent's `created` time if available and more appropriate.
-      // For simplicity here, we use checkoutSession.created as requested.
+      // To ensure data accuracy, retrieve the PaymentIntent to use its creation timestamp
+      // This reflects the actual payment time, not the checkout session creation time.
+      const paymentIntent = await stripe.paymentIntents.retrieve(csPaymentIntentId);
+      if (!paymentIntent) {
+        console.error(`Could not retrieve PaymentIntent ${csPaymentIntentId} for Checkout Session ${checkoutSession.id}`);
+        return NextResponse.json({ error: "Could not retrieve PaymentIntent" }, { status: 500 });
+      }
+      const csCreatedTimestamp = paymentIntent.created; // Use the more accurate payment confirmation time
+
       errorResponse = await handleSubscriptionCreation(csEmail, csName || null, csPlanId, csPaymentIntentId, csCreatedTimestamp);
       if (errorResponse) return errorResponse;
       break
