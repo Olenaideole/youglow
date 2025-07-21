@@ -113,19 +113,8 @@ export const createAdminClient = () => {
     const serverUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    // Enhanced logging for admin client initialization
-    console.log("[DEBUG] createAdminClient: Checking environment variables...");
-    console.log(`[DEBUG] createAdminClient: NEXT_PUBLIC_SUPABASE_URL is ${serverUrl ? 'SET' : 'NOT SET'}`);
-    console.log(`[DEBUG] createAdminClient: SUPABASE_SERVICE_ROLE_KEY is ${serverKey ? 'SET (first 5 chars: ' + serverKey?.substring(0,5) + '...)' : 'NOT SET'}`);
-    console.log(`[DEBUG] createAdminClient: isV0Preview is ${isV0Preview}`);
-
-    if (isV0Preview) {
-      console.warn("[DEBUG] createAdminClient: isV0Preview is true. Falling back to mock client.");
-      return createMockSupabaseClient();
-    }
-
     if (!serverUrl || !serverKey) {
-      console.warn(`lib/supabase: Admin Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL: ${serverUrl ? 'OK' : 'MISSING'}, SUPABASE_SERVICE_ROLE_KEY: ${serverKey ? 'OK' : 'MISSING'}. Falling back to mock client.`);
+      console.warn("lib/supabase: Admin Supabase env vars missing. NEXT_PUBLIC_SUPABASE_URL:", serverUrl, "SUPABASE_SERVICE_ROLE_KEY:", serverKey, "Falling back to mock client.");
       return createMockSupabaseClient()
     }
 
