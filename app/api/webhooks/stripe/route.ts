@@ -110,16 +110,16 @@ export async function POST(request: NextRequest) {
 
   switch (event.type) {
     case "payment_intent.succeeded":
-      const paymentIntent = event.data.object
-      console.log(`Processing payment_intent.succeeded for ID: ${paymentIntent.id}`);
-      const { email: piEmail, name: piName, planId: piPlanId } = paymentIntent.metadata
+      const paymentIntentSucceeded = event.data.object
+      console.log(`Processing payment_intent.succeeded for ID: ${paymentIntentSucceeded.id}`);
+      const { email: piEmail, name: piName, planId: piPlanId } = paymentIntentSucceeded.metadata
 
       if (!piEmail || !piPlanId) { // Name can be optional
-        console.error("Missing critical metadata (email or planId) from payment_intent.succeeded:", paymentIntent.id, paymentIntent.metadata)
+        console.error("Missing critical metadata (email or planId) from payment_intent.succeeded:", paymentIntentSucceeded.id, paymentIntentSucceeded.metadata)
         return NextResponse.json({ error: "Missing critical metadata from payment intent" }, { status: 400 })
       }
 
-      errorResponse = await handleSubscriptionCreation(piEmail, piName || null, piPlanId, paymentIntent.id, paymentIntent.created)
+      errorResponse = await handleSubscriptionCreation(piEmail, piName || null, piPlanId, paymentIntentSucceeded.id, paymentIntentSucceeded.created)
       if (errorResponse) return errorResponse
       break
 
